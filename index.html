@@ -11,35 +11,57 @@
   <h1>Web Image Editor</h1>
   <h2 class="subtitle">by Mattias</h2>
 
-<header>
-  <div class="group" role="group" aria-label="Tools" id="tools">
-    <button data-tool="pen" aria-pressed="true">Paint</button>
-    <button data-tool="arrow" aria-pressed="false">Arrow</button>
-    <button data-tool="line" aria-pressed="false">Line</button>
-    <button data-tool="rect" aria-pressed="false">Box</button>
-    <button data-tool="censor" aria-pressed="false">Censor</button>
-    <button data-tool="text" aria-pressed="false">Text</button>
-  </div>
-  <div class="group">
-    <input id="color" type="color" value="#ff1a1a" aria-label="Color">
-    <button class="swatch" data-c="#ff1a1a" style="background:#ff1a1a" aria-label="Red"></button>
-    <button class="swatch" data-c="#ffe600" style="background:#ffe600" aria-label="Yellow"></button>
-    <button class="swatch" data-c="#00c853" style="background:#00c853" aria-label="Green"></button>
-    <button class="swatch" data-c="#2979ff" style="background:#2979ff" aria-label="Blue"></button>
-    <button class="swatch" data-c="#000000" style="background:#000" aria-label="Black"></button>
-  </div>
-  <div class="group">
-    <label for="size">Size</label>
-    <input id="size" type="range" min="2" max="24" value="6">
-  </div>
-  <div class="group">
-    <button id="undo" disabled>Undo</button>
-    <button id="clear" disabled>Clear</button>
-    <button id="newimg" class="hide">New image</button>
-    <button id="copy" class="hide">Copy</button>
-    <button id="save" class="primary" disabled>Download PNG</button>
-    <button id="saveJpg" class="primary" disabled>Download JPG</button>
-  </div>
+<header class="toolbar">
+  <section class="panel" aria-labelledby="lblTools">
+    <h3 class="panel-title" id="lblTools">Tool</h3>
+    <div class="group" role="group" aria-label="Tools" id="tools">
+      <button data-tool="pen" aria-pressed="true" title="Freehand drawing">Paint</button>
+      <button data-tool="arrow" aria-pressed="false" title="Draw an arrow">Arrow</button>
+      <button data-tool="line" aria-pressed="false" title="Draw a straight line">Line</button>
+      <button data-tool="rect" aria-pressed="false" title="Draw a rectangle outline">Box</button>
+      <button data-tool="censor" aria-pressed="false" title="Pixelate an area">Censor</button>
+      <button data-tool="text" aria-pressed="false" title="Add text">Text</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="lblColor">
+    <h3 class="panel-title" id="lblColor">Color</h3>
+    <div class="group">
+      <div id="swatches" class="swatches" role="group" aria-label="Color palette"></div>
+      <label class="edit-color" title="Change the color of the selected swatch">
+        <input id="color" type="color" value="#ff1a1a" aria-label="Edit selected swatch color">
+        <span>Edit</span>
+      </label>
+      <button id="resetPalette" class="small" title="Restore the default colors">Reset</button>
+    </div>
+    <p class="hint">Click a swatch to use it. Click Edit to change the selected swatch.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="lblSize">
+    <h3 class="panel-title" id="lblSize">Size</h3>
+    <div class="group">
+      <input id="size" type="range" min="2" max="24" value="6" aria-label="Size">
+      <output id="sizeVal" for="size">6</output>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="lblEdit">
+    <h3 class="panel-title" id="lblEdit">Edit</h3>
+    <div class="group">
+      <button id="undo" class="danger" disabled title="Remove the last annotation (Ctrl+Z)">Undo</button>
+      <button id="clear" class="danger" disabled title="Remove all annotations">Clear</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="lblFile">
+    <h3 class="panel-title" id="lblFile">Image</h3>
+    <div class="group">
+      <button id="newimg" class="hide">New image</button>
+      <button id="copy" class="hide">Copy</button>
+      <button id="save" class="primary" disabled>Download PNG</button>
+      <button id="saveJpg" class="primary" disabled>Download JPG</button>
+    </div>
+  </section>
 </header>
 
 <main>
@@ -195,6 +217,22 @@
     ops.forEach(drawOp);
     if (cur) drawOp(cur);
 
+    // Censor outline: shown only while dragging, never exported
+    if (cur && cur.tool === 'censor') {
+      const x = Math.min(cur.a[0], cur.b[0]), y = Math.min(cur.a[1], cur.b[1]);
+      const w = Math.abs(cur.b[0] - cur.a[0]), h = Math.abs(cur.b[1] - cur.a[1]);
+      const lw = Math.max(2, cv.width / 500), dash = lw * 4;
+      ctx.save();
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = '#ffffff';
+      ctx.setLineDash([]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.strokeStyle = '#000000';
+      ctx.setLineDash([dash, dash]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
+    }
+
     // Live text preview while editing
     if (textCanvasPos && !textEditor.classList.contains('hide')) {
       drawText({
@@ -332,17 +370,66 @@
            p[1] >= bounds.y - pad && p[1] <= bounds.y + bounds.h + pad;
   }
 
+  // Size slider (with live number readout)
   $('size').addEventListener('input', () => {
+    $('sizeVal').textContent = $('size').value;
     if (!textEditor.classList.contains('hide')) { redraw(); positionTextEditor(); }
   });
+
+  // Editable color palette
+  const DEFAULT_PALETTE = ['#ff1a1a', '#ffe600', '#00c853', '#2979ff', '#000000'];
+  const PALETTE_KEY = 'web-image-editor-palette';
+  function loadPalette() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PALETTE_KEY));
+      if (Array.isArray(p) && p.length === DEFAULT_PALETTE.length && p.every(c => /^#[0-9a-f]{6}$/i.test(c))) return p;
+    } catch (e) {}
+    return DEFAULT_PALETTE.slice();
+  }
+  function savePalette() {
+    try { localStorage.setItem(PALETTE_KEY, JSON.stringify(palette)); } catch (e) {}
+  }
+  let palette = loadPalette(), sel = 0;
+  $('color').value = palette[sel];
+
+  function renderSwatches() {
+    const box = $('swatches');
+    box.innerHTML = '';
+    palette.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch' + (i === sel ? ' selected' : '');
+      b.style.background = c;
+      b.title = c.toUpperCase() + (i === sel ? ' (selected)' : '');
+      b.setAttribute('aria-label', 'Color ' + (i + 1) + ', ' + c);
+      b.setAttribute('aria-pressed', i === sel);
+      b.onclick = () => {
+        sel = i;
+        $('color').value = palette[i];
+        renderSwatches();
+        if (!textEditor.classList.contains('hide')) redraw();
+      };
+      box.appendChild(b);
+    });
+  }
+  renderSwatches();
+
+  // Editing the picker changes the selected swatch
   $('color').addEventListener('input', () => {
+    palette[sel] = $('color').value;
+    savePalette();
+    const b = $('swatches').children[sel];
+    if (b) { b.style.background = palette[sel]; b.title = palette[sel].toUpperCase() + ' (selected)'; }
     if (!textEditor.classList.contains('hide')) redraw();
   });
-  document.querySelectorAll('.swatch').forEach(s => {
-    s.addEventListener('click', () => {
-      if (!textEditor.classList.contains('hide')) setTimeout(redraw, 0);
-    });
-  });
+  $('resetPalette').onclick = () => {
+    palette = DEFAULT_PALETTE.slice();
+    savePalette();
+    $('color').value = palette[sel];
+    renderSwatches();
+    if (!textEditor.classList.contains('hide')) redraw();
+  };
+
   addEventListener('resize', () => {
     if (!textEditor.classList.contains('hide')) positionTextEditor();
   });
@@ -426,7 +513,6 @@
     tool = b.dataset.tool;
     document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x === b));
   });
-  document.querySelectorAll('.swatch').forEach(s => s.onclick = () => $('color').value = s.dataset.c);
   $('undo').onclick = () => { ops.pop(); redraw(); };
   $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelTextEditor(); redraw(); });
   addEventListener('keydown', e => {
