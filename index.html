@@ -23,6 +23,7 @@
       <button data-tool="arrow" aria-pressed="false" title="Draw an arrow">Arrow</button>
       <button data-tool="line" aria-pressed="false" title="Draw a straight line">Line</button>
       <button data-tool="rect" aria-pressed="false" title="Draw a rectangle outline">Box</button>
+      <button data-tool="circle" aria-pressed="false" title="Draw a circle outline">Circle</button>
       <button data-tool="censor" aria-pressed="false" title="Pixelate an area">Censor</button>
       <button data-tool="text" aria-pressed="false" title="Add text">Text</button>
     </div>
@@ -105,19 +106,19 @@
     <div class="info-section-title">Privacy & Processing</div>
     <div class="info-card">
       <ul>
-        <li><strong>Client-Side Only:</strong> Everything stays entirely in your browser. No images are uploaded to any server.</li>
-        <li><strong>Clipboard:</strong> Supports pasting via Ctrl+V and copying annotated images directly.</li>
+        <li><strong>Client-Side Only:</strong> Everything stays entirely in your browser. No images are uploaded to any server[cite: 3].</li>
+        <li><strong>Clipboard:</strong> Supports pasting via Ctrl+V and copying annotated images directly[cite: 3].</li>
       </ul>
     </div>
 
     <div class="info-section-title">Features & Tools</div>
     <div class="info-card">
       <ul>
-        <li><strong>Paint:</strong> Freehand drawing tool with custom sizing and color swatches.</li>
-        <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads.</li>
-        <li><strong>Box:</strong> Draw precise rectangular outlines.</li>
-        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks.</li>
-        <li><strong>Text:</strong> Place text on canvas, drag to reposition, then click Place or press Enter.</li>
+        <li><strong>Paint:</strong> Freehand drawing tool with custom sizing and color swatches[cite: 3].</li>
+        <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads[cite: 3].</li>
+        <li><strong>Box & Circle:</strong> Draw precise rectangular or circular outlines[cite: 3].</li>
+        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks[cite: 3].</li>
+        <li><strong>Text:</strong> Place text on canvas, drag to reposition, then click Place or press Enter[cite: 3].</li>
       </ul>
     </div>
   </div>
@@ -242,6 +243,16 @@
         ctx.stroke();
         break;
       case 'rect': ctx.strokeRect(rx, ry, rw, rh); break;
+      case 'circle': {
+        ctx.beginPath();
+        const rxRadius = rw / 2;
+        const ryRadius = rh / 2;
+        const centerX = rx + rxRadius;
+        const centerY = ry + ryRadius;
+        ctx.ellipse(centerX, centerY, Math.abs(rxRadius), Math.abs(ryRadius), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      }
       case 'pen':
         ctx.beginPath(); ctx.moveTo(o.pts[0][0], o.pts[0][1]);
         o.pts.forEach(p => ctx.lineTo(p[0], p[1]));
@@ -413,7 +424,7 @@
     if (!textEditor.classList.contains('hide')) { redraw(); positionTextEditor(); }
   });
 
-  const DEFAULT_PALETTE = ['#ff1a1a', '#ffe600', '#00c853', '#2979ff', '#000000'];
+  const DEFAULT_PALETTE = ['#ff1a1a', '#000000', '#ffffff', '#00c853', '#ffe600'];
   const PALETTE_KEY = 'web-image-editor-palette';
   function loadPalette() {
     try {
