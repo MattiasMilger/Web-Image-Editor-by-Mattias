@@ -11,6 +11,10 @@
   <h1>Web Image Editor</h1>
   <h2 class="subtitle">by Mattias</h2>
 
+  <div class="top-controls">
+    <button id="infoBtn" type="button">Info</button>
+  </div>
+
 <header class="toolbar">
   <section class="panel" aria-labelledby="lblTools">
     <h3 class="panel-title" id="lblTools">Tool</h3>
@@ -91,11 +95,52 @@
   </div>
 </dialog>
 
+<!-- Info Dialog Modal -->
+<dialog id="infoDlg" class="info-dialog">
+  <div class="info-header">
+    <h3 class="info-title">Help & Info</h3>
+    <button id="infoCloseX" class="info-close-x" aria-label="Close modal">&times;</button>
+  </div>
+  <div class="info-body">
+    <div class="info-section-title">Privacy & Processing</div>
+    <div class="info-card">
+      <ul>
+        <li><strong>Client-Side Only:</strong> Everything stays entirely in your browser. No images are uploaded to any server.</li>
+        <li><strong>Clipboard:</strong> Supports pasting via Ctrl+V and copying annotated images directly.</li>
+      </ul>
+    </div>
+
+    <div class="info-section-title">Features & Tools</div>
+    <div class="info-card">
+      <ul>
+        <li><strong>Paint:</strong> Freehand drawing tool with custom sizing and color swatches.</li>
+        <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads.</li>
+        <li><strong>Box:</strong> Draw precise rectangular outlines.</li>
+        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks.</li>
+        <li><strong>Text:</strong> Place text on canvas, drag to reposition, then click Place or press Enter.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="row">
+    <button id="infoCloseBtn" class="primary">Close</button>
+  </div>
+</dialog>
+
 <script>
 (() => {
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d', { willReadFrequently: true });
   let img = null, ops = [], cur = null, tool = 'pen';
+
+  // Info Modal Logic
+  const infoDlg = $('infoDlg');$('infoBtn').onclick = () => infoDlg.showModal();
+  $('infoCloseX').onclick = () => infoDlg.close();$('infoCloseBtn').onclick = () => infoDlg.close();
+  infoDlg.onclick = e => {
+    const rect = infoDlg.getBoundingClientRect();
+    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+      infoDlg.close();
+    }
+  };
 
   // Confirmation dialog
   let onYes = null;
@@ -103,12 +148,11 @@
     $('dlgText').textContent = text; $('dlgYes').textContent = yesLabel; onYes = fn;
     $('dlg').showModal();
   }
-  $('dlgNo').onclick = () => $('dlg').close();
-  $('dlgYes').onclick = () => { $('dlg').close(); if (onYes) onYes(); };
+  $('dlgNo').onclick = () =>$('dlg').close();
+  $('dlgYes').onclick = () => {$('dlg').close(); if (onYes) onYes(); };
 
   // Loading images (file picker, paste, drop)
-  const openPicker = () => $('file').click();
-  $('empty').onclick = openPicker;
+  const openPicker = () => $('file').click();$('empty').onclick = openPicker;
   $('empty').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } };
   function load(blob) {
     if (!blob || !blob.type.startsWith('image/')) return;
@@ -117,13 +161,12 @@
       img = im; cv.width = im.naturalWidth; cv.height = im.naturalHeight;
       ops = []; cur = null;
       cancelTextEditor();
-      $('empty').classList.add('hide'); $('stage').classList.remove('hide'); $('newimg').classList.remove('hide');
+      $('empty').classList.add('hide'); $('stage').classList.remove('hide');$('newimg').classList.remove('hide');
       redraw(); URL.revokeObjectURL(url);
     };
     im.src = url;
   }
-  $('file').onchange = e => { load(e.target.files[0]); e.target.value = ''; };
-  $('newimg').onclick = () => { if (ops.length) ask('Open a new image? Your annotations will be lost.', 'Open new', openPicker); else openPicker(); };
+  $('file').onchange = e => { load(e.target.files[0]); e.target.value = ''; };$('newimg').onclick = () => { if (ops.length) ask('Open a new image? Your annotations will be lost.', 'Open new', openPicker); else openPicker(); };
   const dropLoad = f => ops.length ? ask('Replace this image? Your annotations will be lost.', 'Replace', () => load(f)) : load(f);
   addEventListener('paste', e => {
     for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) { dropLoad(it.getAsFile()); break; }
@@ -217,7 +260,6 @@
     ops.forEach(drawOp);
     if (cur) drawOp(cur);
 
-    // Censor outline: shown only while dragging, never exported
     if (cur && cur.tool === 'censor') {
       const x = Math.min(cur.a[0], cur.b[0]), y = Math.min(cur.a[1], cur.b[1]);
       const w = Math.abs(cur.b[0] - cur.a[0]), h = Math.abs(cur.b[1] - cur.a[1]);
@@ -233,7 +275,6 @@
       ctx.restore();
     }
 
-    // Live text preview while editing
     if (textCanvasPos && !textEditor.classList.contains('hide')) {
       drawText({
         tool: 'text',
@@ -251,7 +292,6 @@
     $('saveJpg').disabled = false;
   }
 
-  // Text tool state
   const textEditor = $('textEditor');
   const textInput = $('textInput');
   let textCanvasPos = null;
@@ -271,7 +311,6 @@
     const scaleX = rect.width / Math.max(1, cv.width);
     const scaleY = rect.height / Math.max(1, cv.height);
 
-    // Place/Cancel always sit under the text using real text height
     const bounds = getTextBounds({
       size: scaled(),
       a: textCanvasPos,
@@ -328,7 +367,6 @@
     else if (e.key === 'Escape') { e.preventDefault(); cancelTextEditor(); }
   });
 
-  // Drag via the Place/Cancel bar
   textEditor.addEventListener('pointerdown', e => {
     if (e.target.closest('button')) return;
     isDraggingText = true;
@@ -370,13 +408,11 @@
            p[1] >= bounds.y - pad && p[1] <= bounds.y + bounds.h + pad;
   }
 
-  // Size slider (with live number readout)
   $('size').addEventListener('input', () => {
-    $('sizeVal').textContent = $('size').value;
+    $('sizeVal').textContent =$('size').value;
     if (!textEditor.classList.contains('hide')) { redraw(); positionTextEditor(); }
   });
 
-  // Editable color palette
   const DEFAULT_PALETTE = ['#ff1a1a', '#ffe600', '#00c853', '#2979ff', '#000000'];
   const PALETTE_KEY = 'web-image-editor-palette';
   function loadPalette() {
@@ -414,7 +450,6 @@
   }
   renderSwatches();
 
-  // Editing the picker changes the selected swatch
   $('color').addEventListener('input', () => {
     palette[sel] = $('color').value;
     savePalette();
@@ -442,7 +477,6 @@
   cv.addEventListener('pointerdown', e => {
     if (!img) return;
 
-    // Click on the live text → drag it
     if (!textEditor.classList.contains('hide')) {
       const p = pos(e);
       if (hitTestText(p)) {
@@ -506,17 +540,15 @@
   cv.addEventListener('pointerup', end);
   cv.addEventListener('pointercancel', end);
 
-  // Tool / control handlers
   $('tools').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (tool === 'text') cancelTextEditor();
     tool = b.dataset.tool;
     document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x === b));
   });
-  $('undo').onclick = () => { ops.pop(); redraw(); };
-  $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelTextEditor(); redraw(); });
+  $('undo').onclick = () => { ops.pop(); redraw(); };$('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelTextEditor(); redraw(); });
   addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !$('dlg').open) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !$('dlg').open && !infoDlg.open) {
       e.preventDefault(); ops.pop(); redraw();
     }
   });
@@ -528,12 +560,10 @@
     a.href = cv.toDataURL(type, quality);
     a.click();
   }
-  $('save').onclick = () => downloadCanvas('image/png', 'png');
-  $('saveJpg').onclick = () => downloadCanvas('image/jpeg', 'jpg', 0.95);
+  $('save').onclick = () => downloadCanvas('image/png', 'png');$('saveJpg').onclick = () => downloadCanvas('image/jpeg', 'jpg', 0.95);
 
   if (navigator.clipboard && window.ClipboardItem) {
-    $('copy').classList.remove('hide');
-    $('copy').onclick = () => cv.toBlob(b => navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]));
+    $('copy').classList.remove('hide');$('copy').onclick = () => cv.toBlob(b => navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]));
   }
 })();
 </script>

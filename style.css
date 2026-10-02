@@ -107,6 +107,27 @@ h1 {
     color: var(--fg-color);
 }
 
+/* --- Top Controls for Info button --- */
+.top-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.top-controls button {
+    background-color: var(--button-bg);
+    color: var(--fg-color);
+    border: 1px solid var(--border-color);
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.top-controls button:hover {
+    background-color: var(--select-bg);
+}
+
 /* --- Toolbar: separate labelled panels --- */
 .toolbar {
     display: flex;
@@ -175,7 +196,6 @@ button.primary:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--accent-color) 80%, black);
 }
 
-/* Destructive actions: Undo and Clear */
 button.danger {
     background-color: var(--danger-color);
     color: #ffffff;
@@ -220,7 +240,6 @@ button.small { padding: 5px 10px; font-size: 0.8em; }
     box-shadow: 0 0 0 3px var(--accent-color);
 }
 
-/* "Edit" picker, visibly a button */
 .edit-color {
     display: inline-flex;
     align-items: center;
@@ -316,7 +335,6 @@ main {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
-/* Minimal Place / Cancel bar only */
 #textEditor {
     position: absolute;
     z-index: 30;
@@ -333,7 +351,6 @@ main {
     backdrop-filter: blur(2px);
 }
 
-/* Keep input for typing but make it almost invisible */
 #textInput {
     position: absolute;
     opacity: 0;
@@ -355,7 +372,7 @@ main {
     font-size: 0.85em;
 }
 
-/* Dialog */
+/* Dialog / Modal styles */
 dialog {
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -371,6 +388,81 @@ dialog p { margin: 0 0 20px 0; font-size: 1.05em; line-height: 1.5; }
 dialog .row { display: flex; justify-content: flex-end; gap: 10px; }
 dialog button { min-width: 90px; }
 
+/* Info Dialog Specific Styling */
+.info-dialog {
+    max-width: 540px;
+    width: 90%;
+    padding: 20px 24px;
+}
+
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.info-title {
+    margin: 0;
+    font-size: 1.35em;
+    color: var(--accent-color);
+}
+
+.info-close-x {
+    background: transparent;
+    border: none;
+    font-size: 1.5em;
+    color: var(--fg-color);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+.info-close-x:hover {
+    color: var(--accent-color);
+    background: transparent;
+}
+
+.info-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding-right: 4px;
+}
+
+.info-section-title {
+    font-size: 0.95em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-color);
+    margin: 15px 0 8px 0;
+}
+.info-section-title:first-child {
+    margin-top: 0;
+}
+
+.info-card {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.info-card li {
+    margin: 6px 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
 /* Footer */
 footer {
     width: 100%;
@@ -384,7 +476,7 @@ footer {
 footer p { margin: 0; padding: 0; }
 footer a {
     color: var(--accent-color);
-    text-decoration: none;
+    text-text-decoration: none;
     font-weight: 700;
 }
 footer a:hover {
