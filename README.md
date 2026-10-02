@@ -57,3 +57,9 @@ Web Image Editor by Mattias/
 ## Browser Support
 
 Works in all modern browsers (Chrome, Firefox, Edge, Safari). Requires JavaScript enabled. Clipboard copy requires a secure context (HTTPS or localhost).
+
+---
+
+## More Projects
+
+Check out more of my work at [mattiasmilger.github.io](https://mattiasmilger.github.io/).
