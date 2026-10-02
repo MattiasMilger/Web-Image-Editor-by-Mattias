@@ -19,13 +19,31 @@
   <section class="panel" aria-labelledby="lblTools">
     <h3 class="panel-title" id="lblTools">Tool</h3>
     <div class="group" role="group" aria-label="Tools" id="tools">
-      <button data-tool="pen" aria-pressed="true" title="Freehand drawing">Paint</button>
-      <button data-tool="arrow" aria-pressed="false" title="Draw an arrow">Arrow</button>
-      <button data-tool="line" aria-pressed="false" title="Draw a straight line">Line</button>
-      <button data-tool="rect" aria-pressed="false" title="Draw a rectangle outline">Box</button>
-      <button data-tool="circle" aria-pressed="false" title="Draw a circle outline">Circle</button>
-      <button data-tool="censor" aria-pressed="false" title="Pixelate an area">Censor</button>
-      <button data-tool="text" aria-pressed="false" title="Add text">Text</button>
+      <button data-tool="pen" aria-pressed="true" title="Freehand drawing" aria-label="Paint">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+      </button>
+      <button data-tool="arrow" aria-pressed="false" title="Draw an arrow" aria-label="Arrow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="10 5 19 5 19 14"/></svg>
+      </button>
+      <button data-tool="line" aria-pressed="false" title="Draw a straight line" aria-label="Line">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+      </button>
+      <button data-tool="rect" aria-pressed="false" title="Draw a rectangle outline" aria-label="Box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1"/></svg>
+      </button>
+      <button data-tool="circle" aria-pressed="false" title="Draw a circle outline" aria-label="Circle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
+      </button>
+      <button data-tool="censor" aria-pressed="false" title="Pixelate an area" aria-label="Censor">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+          <circle cx="12" cy="12" r="3"/>
+          <line x1="4" y1="4" x2="20" y2="20"/>
+        </svg>
+      </button>
+      <button data-tool="text" aria-pressed="false" title="Add text" aria-label="Text">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M8 19h8"/></svg>
+      </button>
     </div>
   </section>
 
@@ -37,15 +55,20 @@
         <input id="color" type="color" value="#ff1a1a" aria-label="Edit selected swatch color">
         <span>Edit</span>
       </label>
+      <button id="eyedropBtn" type="button" class="eyedrop-btn" title="Pick a colour from the image" aria-pressed="false" aria-label="Eyedropper">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.42 0l-3.12 3.12-1.76-1.77-1.42 1.41 1.77 1.77-6.36 6.36c-.27.27-.44.62-.5 1L3 20.25a.75.75 0 0 0 .75.75h.04l3.48-.58c.38-.06.73-.23 1-.5l6.36-6.36 1.77 1.77 1.41-1.42-1.77-1.76 3.12-3.12a1 1 0 0 0 0-1.42zM8.46 17.88l-1.68.28-.48-.48.28-1.68 5.6-5.6 1.88 1.88-5.6 5.6z"/>
+        </svg>
+      </button>
       <button id="resetPalette" class="small" title="Restore the default colors">Reset</button>
     </div>
-    <p class="hint">Click a swatch to use it. Click Edit to change the selected swatch.</p>
+    <p class="hint">Click a swatch to use it. Edit to change it, or use the eyedropper to sample from the image.</p>
   </section>
 
   <section class="panel" aria-labelledby="lblSize">
     <h3 class="panel-title" id="lblSize">Size</h3>
     <div class="group">
-      <input id="size" type="range" min="2" max="24" value="6" aria-label="Size">
+      <input id="size" type="range" min="2" max="48" value="6" aria-label="Size">
       <output id="sizeVal" for="size">6</output>
     </div>
   </section>
@@ -119,6 +142,7 @@
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular outlines.</li>
         <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks.</li>
         <li><strong>Text:</strong> Place text on canvas, drag to reposition, then click Place or press Enter.</li>
+        <li><strong>Eyedropper:</strong> In the Color panel, click the pipette icon, then click the image to copy that pixel’s colour into the selected swatch.</li>
       </ul>
     </div>
   </div>
@@ -131,7 +155,23 @@
 (() => {
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d', { willReadFrequently: true });
+  // Offscreen canvas holds the committed image + finished annotations so we never
+  // re-draw the full history on every pointermove (main source of sluggishness).
+  const baseCv = document.createElement('canvas');
+  const baseCtx = baseCv.getContext('2d', { willReadFrequently: true });
   let img = null, ops = [], cur = null, tool = 'pen';
+  let rafId = 0; // requestAnimationFrame id for coalescing redraws
+  let eyedropActive = false;
+
+  function setEyedrop(on) {
+    eyedropActive = !!on;
+    const btn = $('eyedropBtn');
+    if (btn) {
+      btn.setAttribute('aria-pressed', eyedropActive ? 'true' : 'false');
+      btn.classList.toggle('active', eyedropActive);
+    }
+    if (img) cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
+  }
 
   // Info Modal Logic
   const infoDlg = $('infoDlg');$('infoBtn').onclick = () => infoDlg.showModal();
@@ -159,11 +199,15 @@
     if (!blob || !blob.type.startsWith('image/')) return;
     const url = URL.createObjectURL(blob), im = new Image();
     im.onload = () => {
-      img = im; cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      img = im;
+      cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      baseCv.width = cv.width; baseCv.height = cv.height;
       ops = []; cur = null;
-      cancelTextEditor();
+      rebuildBase();
+      cancelTextEditor(); // clears text UI and paints clean base
       $('empty').classList.add('hide'); $('stage').classList.remove('hide');$('newimg').classList.remove('hide');
-      redraw(); URL.revokeObjectURL(url);
+      redrawNow();
+      URL.revokeObjectURL(url);
     };
     im.src = url;
   }
@@ -176,35 +220,37 @@
   addEventListener('dragleave', () => $('empty').classList.remove('over'));
   addEventListener('drop', e => { e.preventDefault(); $('empty').classList.remove('over'); dropLoad(e.dataTransfer.files[0]); });
 
-  // Drawing helpers
-  function censor(rx, ry, rw, rh, size) {
+  // Drawing helpers — exact original censor algorithm (samples + fills on the same ctx)
+  function censor(targetCtx, rx, ry, rw, rh, size) {
     const x = Math.max(0, Math.floor(rx)), y = Math.max(0, Math.floor(ry));
     const w = Math.min(cv.width - x, Math.ceil(rw)), h = Math.min(cv.height - y, Math.ceil(rh));
     if (w < 2 || h < 2) return;
     const blk = Math.max(16 * Math.max(1, cv.width / 1000), size * 3);
-    const d = ctx.getImageData(x, y, w, h).data;
+    // getImageData returns a copy — safe to then fillRect on the same canvas
+    const d = targetCtx.getImageData(x, y, w, h).data;
     for (let by = 0; by < h; by += blk) {
       for (let bx = 0; bx < w; bx += blk) {
         const bw = Math.min(blk, w - bx), bh = Math.min(blk, h - by);
         let r = 0, g = 0, b = 0, n = 0;
         for (let yy = Math.floor(by); yy < Math.floor(by + bh); yy++) {
           for (let xx = Math.floor(bx); xx < Math.floor(bx + bw); xx++) {
-            const i = (yy * w + xx) * 4; r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
+            const i = (yy * w + xx) * 4;
+            r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
           }
         }
         if (!n) continue;
-        ctx.fillStyle = `rgb(${Math.round(r / n)},${Math.round(g / n)},${Math.round(b / n)})`;
-        ctx.fillRect(x + bx, y + by, Math.ceil(bw) + 1, Math.ceil(bh) + 1);
+        targetCtx.fillStyle = `rgb(${Math.round(r / n)},${Math.round(g / n)},${Math.round(b / n)})`;
+        targetCtx.fillRect(x + bx, y + by, Math.ceil(bw) + 1, Math.ceil(bh) + 1);
       }
     }
   }
 
-  function drawText(o) {
+  function drawTextOn(c, o) {
     const fontSize = Math.max(12, o.size * 4.5);
-    ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = o.color;
-    ctx.fillText(o.text || '', o.a[0], o.a[1]);
+    c.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+    c.textBaseline = 'top';
+    c.fillStyle = o.color;
+    c.fillText(o.text || '', o.a[0], o.a[1]);
   }
 
   function getTextBounds(o) {
@@ -215,79 +261,100 @@
     return { x: o.a[0], y: o.a[1], w, h };
   }
 
-  function drawOp(o) {
-    ctx.save();
-    ctx.strokeStyle = ctx.fillStyle = o.color;
-    ctx.lineWidth = o.size; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  function drawOpOn(c, o) {
+    c.save();
+    c.strokeStyle = c.fillStyle = o.color;
+    c.lineWidth = o.size; c.lineCap = 'round'; c.lineJoin = 'round';
     const [x1, y1] = o.a, [x2, y2] = o.b || o.a;
     const rx = Math.min(x1, x2), ry = Math.min(y1, y2), rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
     switch (o.tool) {
       case 'arrow': {
         const ang = Math.atan2(y2 - y1, x2 - x1);
         const head = Math.max(14, o.size * 4);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
-        ctx.lineTo(x2, y2);
-        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
-        ctx.stroke();
+        c.beginPath();
+        c.moveTo(x1, y1);
+        c.lineTo(x2, y2);
+        c.stroke();
+        c.beginPath();
+        c.moveTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        c.lineTo(x2, y2);
+        c.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        c.stroke();
         break;
       }
       case 'line':
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        c.beginPath();
+        c.moveTo(x1, y1);
+        c.lineTo(x2, y2);
+        c.stroke();
         break;
-      case 'rect': ctx.strokeRect(rx, ry, rw, rh); break;
+      case 'rect': c.strokeRect(rx, ry, rw, rh); break;
       case 'circle': {
-        ctx.beginPath();
+        c.beginPath();
         const rxRadius = rw / 2;
         const ryRadius = rh / 2;
-        const centerX = rx + rxRadius;
-        const centerY = ry + ryRadius;
-        ctx.ellipse(centerX, centerY, Math.abs(rxRadius), Math.abs(ryRadius), 0, 0, Math.PI * 2);
-        ctx.stroke();
+        c.ellipse(rx + rxRadius, ry + ryRadius, Math.abs(rxRadius), Math.abs(ryRadius), 0, 0, Math.PI * 2);
+        c.stroke();
         break;
       }
-      case 'pen':
-        ctx.beginPath(); ctx.moveTo(o.pts[0][0], o.pts[0][1]);
-        o.pts.forEach(p => ctx.lineTo(p[0], p[1]));
-        if (o.pts.length === 1) ctx.lineTo(o.pts[0][0] + .01, o.pts[0][1]);
-        ctx.stroke(); break;
-      case 'censor': censor(rx, ry, rw, rh, o.size); break;
-      case 'text': drawText(o); break;
+      case 'pen': {
+        const pts = o.pts;
+        c.beginPath();
+        c.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+        if (pts.length === 1) c.lineTo(pts[0][0] + 0.01, pts[0][1]);
+        c.stroke();
+        break;
+      }
+      case 'censor':
+        // Must run AFTER the image (+ prior ops) are already on targetCtx
+        censor(c, rx, ry, rw, rh, o.size);
+        break;
+      case 'text':
+        drawTextOn(c, o);
+        break;
     }
-    ctx.restore();
+    c.restore();
   }
 
-  function redraw() {
+  // Rebuild the committed layer (image + finished ops). Call only when ops change.
+  function rebuildBase() {
     if (!img) return;
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(img, 0, 0);
-    ops.forEach(drawOp);
-    if (cur) drawOp(cur);
+    baseCtx.clearRect(0, 0, baseCv.width, baseCv.height);
+    baseCtx.drawImage(img, 0, 0);
+    for (let i = 0; i < ops.length; i++) {
+      // Censor samples whatever is already on base (image + earlier ops) — same as original
+      drawOpOn(baseCtx, ops[i]);
+    }
+  }
 
-    if (cur && cur.tool === 'censor') {
-      const x = Math.min(cur.a[0], cur.b[0]), y = Math.min(cur.a[1], cur.b[1]);
-      const w = Math.abs(cur.b[0] - cur.a[0]), h = Math.abs(cur.b[1] - cur.a[1]);
-      const lw = Math.max(2, cv.width / 500), dash = lw * 4;
-      ctx.save();
-      ctx.lineWidth = lw;
-      ctx.strokeStyle = '#ffffff';
-      ctx.setLineDash([]);
-      ctx.strokeRect(x, y, w, h);
-      ctx.strokeStyle = '#000000';
-      ctx.setLineDash([dash, dash]);
-      ctx.strokeRect(x, y, w, h);
-      ctx.restore();
+  function redrawImmediate() {
+    if (!img) return;
+    // Fast path: blit the committed layer, then only the live stroke / text preview
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(baseCv, 0, 0);
+
+    if (cur) {
+      // Censor needs the image under the selection already on ctx (from the blit above)
+      drawOpOn(ctx, cur);
+      if (cur.tool === 'censor') {
+        const x = Math.min(cur.a[0], cur.b[0]), y = Math.min(cur.a[1], cur.b[1]);
+        const w = Math.abs(cur.b[0] - cur.a[0]), h = Math.abs(cur.b[1] - cur.a[1]);
+        const lw = Math.max(2, cv.width / 500), dash = lw * 4;
+        ctx.save();
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = '#ffffff';
+        ctx.setLineDash([]);
+        ctx.strokeRect(x, y, w, h);
+        ctx.strokeStyle = '#000000';
+        ctx.setLineDash([dash, dash]);
+        ctx.strokeRect(x, y, w, h);
+        ctx.restore();
+      }
     }
 
     if (textCanvasPos && !textEditor.classList.contains('hide')) {
-      drawText({
+      drawTextOn(ctx, {
         tool: 'text',
         color: $('color').value,
         size: scaled(),
@@ -301,6 +368,20 @@
     $('clear').disabled = !has;
     $('save').disabled = false;
     $('saveJpg').disabled = false;
+  }
+
+  // Coalesce multiple pointer events into one paint per frame
+  function redraw() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      redrawImmediate();
+    });
+  }
+
+  function redrawNow() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    redrawImmediate();
   }
 
   const textEditor = $('textEditor');
@@ -366,6 +447,7 @@
       a: [textCanvasPos[0], textCanvasPos[1]],
       text: text
     });
+    rebuildBase();
     cancelTextEditor();
   }
 
@@ -509,6 +591,20 @@
       return;
     }
 
+    // Eyedropper: sample the pixel under the cursor into the selected swatch
+    if (eyedropActive) {
+      const x = Math.max(0, Math.min(cv.width - 1, Math.floor(p[0])));
+      const y = Math.max(0, Math.min(cv.height - 1, Math.floor(p[1])));
+      // Sample committed layer (image + annotations) so picks match what you see
+      const d = baseCtx.getImageData(x, y, 1, 1).data;
+      const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+      palette[sel] = hex;
+      $('color').value = hex;
+      savePalette();
+      renderSwatches();
+      return;
+    }
+
     cv.setPointerCapture(e.pointerId);
     cur = { tool, color: $('color').value, size: scaled(), a: p, b: p, pts: [p] };
     redraw();
@@ -529,10 +625,20 @@
     if (!textEditor.classList.contains('hide') && textCanvasPos) {
       const p = pos(e);
       cv.style.cursor = hitTestText(p) ? 'grab' : 'crosshair';
+    } else if (!cur && img) {
+      cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
     }
 
     if (!cur) return;
-    const p = pos(e); cur.b = p; if (cur.tool === 'pen') cur.pts.push(p);
+    const p = pos(e);
+    cur.b = p;
+    if (cur.tool === 'pen') {
+      // Skip points that are extremely close — keeps path light without changing feel
+      const last = cur.pts[cur.pts.length - 1];
+      if (!last || (p[0] - last[0]) * (p[0] - last[0]) + (p[1] - last[1]) * (p[1] - last[1]) > 2.25) {
+        cur.pts.push(p);
+      }
+    }
     redraw();
   });
 
@@ -545,8 +651,16 @@
     }
     if (!cur) return;
     const moved = Math.hypot(cur.b[0] - cur.a[0], cur.b[1] - cur.a[1]) > 3;
-    if (moved || cur.tool === 'pen') ops.push(cur);
-    cur = null; redraw();
+    if (moved || cur.tool === 'pen') {
+      ops.push(cur);
+      // Censor must sample the pre-censor pixels. Writing onto the same
+      // canvas we just read from is unsafe, so always rebuild the base layer.
+      // For other tools an incremental draw would be fine, but rebuild is
+      // still cheap with the cached approach and keeps one code path.
+      rebuildBase();
+    }
+    cur = null;
+    redrawNow();
   };
   cv.addEventListener('pointerup', end);
   cv.addEventListener('pointercancel', end);
@@ -556,25 +670,39 @@
     if (tool === 'text') cancelTextEditor();
     tool = b.dataset.tool;
     document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    // Choosing a drawing tool turns off the eyedropper
+    if (eyedropActive) setEyedrop(false);
   });
-  $('undo').onclick = () => { ops.pop(); redraw(); };$('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelTextEditor(); redraw(); });
+
+  $('eyedropBtn').onclick = () => {
+    if (tool === 'text') cancelTextEditor();
+    setEyedrop(!eyedropActive);
+  };
+  $('undo').onclick = () => { ops.pop(); rebuildBase(); redrawNow(); };
+  $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelTextEditor(); rebuildBase(); redrawNow(); });
   addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !$('dlg').open && !infoDlg.open) {
-      e.preventDefault(); ops.pop(); redraw();
+      e.preventDefault(); ops.pop(); rebuildBase(); redrawNow();
     }
   });
 
   function downloadCanvas(type, extension, quality) {
+    redrawNow(); // ensure canvas is fully painted before export
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const a = document.createElement('a');
     a.download = 'annotated-' + stamp + '.' + extension;
     a.href = cv.toDataURL(type, quality);
     a.click();
   }
-  $('save').onclick = () => downloadCanvas('image/png', 'png');$('saveJpg').onclick = () => downloadCanvas('image/jpeg', 'jpg', 0.95);
+  $('save').onclick = () => downloadCanvas('image/png', 'png');
+  $('saveJpg').onclick = () => downloadCanvas('image/jpeg', 'jpg', 0.95);
 
   if (navigator.clipboard && window.ClipboardItem) {
-    $('copy').classList.remove('hide');$('copy').onclick = () => cv.toBlob(b => navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]));
+    $('copy').classList.remove('hide');
+    $('copy').onclick = () => {
+      redrawNow();
+      cv.toBlob(b => navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]));
+    };
   }
 })();
 </script>
