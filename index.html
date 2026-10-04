@@ -12,6 +12,7 @@
   <h2 class="subtitle">by Mattias</h2>
 
   <div class="top-controls">
+    <button id="themeBtn" type="button" title="Toggle dark / light mode" aria-label="Toggle theme">◐</button>
     <button id="infoBtn" type="button">Info</button>
   </div>
 
@@ -145,6 +146,13 @@
         <li><strong>Eyedropper:</strong> In the Color panel, click the pipette icon, then click the image to copy that pixel’s colour into the selected swatch.</li>
       </ul>
     </div>
+
+    <div class="info-section-title">Appearance</div>
+    <div class="info-card">
+      <ul>
+        <li><strong>Dark / Light mode:</strong> Click the ◐ button to switch themes. Dark is the default, and your choice is remembered on this device.</li>
+      </ul>
+    </div>
   </div>
   <div class="row">
     <button id="infoCloseBtn" class="primary">Close</button>
@@ -172,6 +180,16 @@
     }
     if (img) cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
   }
+
+  // Theme toggle (dark by default, light via body.light-mode)
+  const THEME_KEY = 'web-image-editor-theme';
+  function applyTheme(light) { document.body.classList.toggle('light-mode', light); }
+  try { applyTheme(localStorage.getItem(THEME_KEY) === 'light'); } catch (e) {}
+  $('themeBtn').onclick = () => {
+    const light = !document.body.classList.contains('light-mode');
+    applyTheme(light);
+    try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
+  };
 
   // Info Modal Logic
   const infoDlg = $('infoDlg');$('infoBtn').onclick = () => infoDlg.showModal();

@@ -22,6 +22,7 @@ Open `index.html` in a modern browser. No build tools or dependencies required.
 - **Undo / Clear** - Undo last annotation or clear everything (with confirmation).
 - **Download** - Export as PNG or high-quality JPG.
 - **Copy** - Copy the annotated image to the clipboard (supported browsers).
+- **Dark / Light Theme** - Toggle between dark and light modes with the ◐ button (dark by default, choice is remembered).
 - **Privacy** - Everything stays in your browser. Nothing is uploaded.
 
 ## Project Structure
@@ -34,8 +35,8 @@ Web Image Editor by Mattias/
 
 | Module | Purpose |
 |---|---|
-| `index.html` | UI layout, tool handling, canvas drawing, image loading (file / paste / drop), text placement, export |
-| `style.css` | Dark theme by default, button/toolbar styles, responsive layout, text editor panel |
+| `index.html` | UI layout, tool handling, canvas drawing, image loading (file / paste / drop), text placement, theme toggle, export |
+| `style.css` | Dark theme by default (light via `body.light-mode`), button/toolbar styles, responsive layout, text editor panel |
 
 ## How It Works
 
@@ -53,6 +54,7 @@ Web Image Editor by Mattias/
 - **Canvas-based** - Annotations are drawn on an HTML5 canvas over the original image.
 - **Pointer events** - Supports mouse, touch, and pen input.
 - **Censor** - Uses large average-colour blocks so text under the censored area cannot be recovered.
+- **Theme** - The selected theme is saved in `localStorage` and restored on the next visit.
 
 ## Browser Support
 
@@ -60,4 +62,4 @@ Works in all modern browsers (Chrome, Firefox, Edge, Safari). Requires JavaScrip
 
 ## More Projects
 
-Check out more of my work at [mattiasmilger.github.io](https://mattiasmilger.github.io/).
+Check out more of my work at [mattiasmilger.github.io](https://mattiasmilger.github.io/)
