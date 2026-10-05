@@ -4,7 +4,561 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Web Image Editor by Mattias</title>
-<link rel="stylesheet" href="style.css">
+<meta name="description" content="A browser-based image editor with drawing, shapes, censor, text, and export tools." />
+<meta property="og:title" content="Web Image Editor by Mattias" />
+<meta property="og:description" content="A browser-based image editor with drawing, shapes, censor, text, and export tools." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<style>
+/* --- Root Variables for Theming (matched to Web Password Generator) --- */
+:root {
+    --bg-color: #f0f0f0;
+    --fg-color: #333333;
+    --entry-bg: #ffffff;
+    --button-bg: #cccccc;
+    --accent-color: #3498db;
+    --error-color: #e74c3c;
+    --danger-color: #d32f2f;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --success-color: #27ae60;
+    --select-bg: #a0a0a0;
+    --container-bg: #ffffff;
+    --border-color: #ccc;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --canvas-bg: #e8e8e8;
+    --empty-bg: #f8f8f8;
+    --panel-bg: #f7f7f7;
+}
+
+body {
+    --bg-color: #1e1e1e;
+    --fg-color: #ffffff;
+    --entry-bg: #3c3c3c;
+    --button-bg: #505050;
+    --accent-color: #2ecc71;
+    --error-color: #c0392b;
+    --danger-color: #d32f2f;
+    --warning-color: #f1c40f;
+    --info-color: #2ecc71;
+    --success-color: #2ecc71;
+    --select-bg: #5a5a5a;
+    --container-bg: #2d2d30;
+    --border-color: #444;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --canvas-bg: #1a1a1a;
+    --empty-bg: #252528;
+    --panel-bg: #353538;
+}
+
+body.light-mode {
+    --bg-color: #f0f0f0;
+    --fg-color: #333333;
+    --entry-bg: #ffffff;
+    --button-bg: #cccccc;
+    --accent-color: #3498db;
+    --error-color: #e74c3c;
+    --danger-color: #d32f2f;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --success-color: #27ae60;
+    --select-bg: #a0a0a0;
+    --container-bg: #ffffff;
+    --border-color: #ccc;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --canvas-bg: #e8e8e8;
+    --empty-bg: #f8f8f8;
+    --panel-bg: #f7f7f7;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--fg-color);
+    padding: 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    background-color: var(--container-bg);
+    padding: 20px;
+    margin: 20px auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+h1 {
+    color: var(--accent-color);
+    text-align: center;
+    margin: 0 0 5px 0;
+    font-size: 1.8em;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: normal;
+    margin: 0 0 20px 0;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 15px;
+    color: var(--fg-color);
+}
+
+/* --- Top Controls for Info button --- */
+.top-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.top-controls button {
+    background-color: var(--button-bg);
+    color: var(--fg-color);
+    border: 1px solid var(--border-color);
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.top-controls button:hover {
+    background-color: var(--select-bg);
+}
+
+/* --- Toolbar: separate labelled panels --- */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 12px;
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.panel-title {
+    margin: 0;
+    font-size: 0.72em;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+}
+
+.hint {
+    margin: 0;
+    font-size: 0.75em;
+    opacity: 0.7;
+    line-height: 1.3;
+    max-width: 260px;
+}
+
+.group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+button {
+    padding: 8px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9em;
+    background-color: var(--button-bg);
+    color: var(--fg-color);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+    font-family: inherit;
+}
+
+button:hover:not(:disabled) { background-color: var(--select-bg); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+button.primary {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: transparent;
+}
+button.primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--accent-color) 80%, black);
+}
+
+button.danger {
+    background-color: var(--danger-color);
+    color: #ffffff;
+    border-color: transparent;
+}
+button.danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--danger-color) 80%, black);
+}
+
+button.small { padding: 5px 10px; font-size: 0.8em; }
+
+/* Eyedropper in the Color panel */
+.eyedrop-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 4px;
+}
+.eyedrop-btn svg {
+    display: block;
+    pointer-events: none;
+}
+.eyedrop-btn.active,
+.eyedrop-btn[aria-pressed="true"] {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: transparent;
+}
+.eyedrop-btn.active:hover,
+.eyedrop-btn[aria-pressed="true"]:hover {
+    background-color: color-mix(in srgb, var(--accent-color) 80%, black);
+}
+
+#tools button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    padding: 0;
+}
+#tools button svg {
+    display: block;
+    pointer-events: none;
+}
+#tools button[aria-pressed="true"] {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: transparent;
+}
+#tools button[aria-pressed="true"]:hover {
+    background-color: color-mix(in srgb, var(--accent-color) 80%, black);
+}
+
+/* --- Color palette --- */
+.swatches {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.swatch {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch.selected {
+    transform: scale(1.15);
+    border-color: #ffffff;
+    box-shadow: 0 0 0 3px var(--accent-color);
+}
+
+.edit-color {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--button-bg);
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--fg-color);
+}
+.edit-color:hover { background-color: var(--select-bg); }
+
+#color {
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+}
+#color::-webkit-color-swatch-wrapper { padding: 0; }
+#color::-webkit-color-swatch { border: 1px solid rgba(0, 0, 0, 0.4); border-radius: 3px; }
+
+/* --- Size --- */
+#size {
+    width: 120px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+#sizeVal {
+    min-width: 2ch;
+    text-align: right;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.hide { display: none !important; }
+
+main {
+    position: relative;
+    min-height: 320px;
+}
+
+#empty {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+    padding: 40px 20px;
+    background-color: var(--empty-bg);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    color: var(--fg-color);
+    pointer-events: auto;
+}
+#empty:hover,
+#empty.over {
+    border-color: var(--accent-color);
+    background-color: color-mix(in srgb, var(--accent-color) 8%, var(--empty-bg));
+}
+#empty p { margin: 6px 0; font-size: 1.05em; }
+#empty small { margin-top: 12px; opacity: 0.7; font-size: 0.85em; }
+
+#stage {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: auto;
+    background-color: var(--canvas-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 8px;
+}
+
+#cv {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    cursor: crosshair;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    touch-action: none;
+}
+
+#textEditor {
+    position: absolute;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    background: rgba(20, 20, 20, 0.4);
+    border: 1px solid rgba(46, 204, 113, 0.7);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    cursor: move;
+    backdrop-filter: blur(2px);
+}
+
+#textInput {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: none;
+    outline: none;
+    pointer-events: none;
+}
+
+.text-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.text-actions button {
+    padding: 5px 12px;
+    font-size: 0.85em;
+}
+
+/* Dialog / Modal styles */
+dialog {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--container-bg);
+    color: var(--fg-color);
+    padding: 24px 28px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    max-width: 420px;
+    width: 90%;
+}
+dialog::backdrop { background-color: rgba(0, 0, 0, 0.6); }
+dialog p { margin: 0 0 20px 0; font-size: 1.05em; line-height: 1.5; }
+dialog .row { display: flex; justify-content: flex-end; gap: 10px; }
+dialog button { min-width: 90px; }
+
+/* Info Dialog Specific Styling */
+.info-dialog {
+    max-width: 540px;
+    width: 90%;
+    padding: 20px 24px;
+}
+
+/* Centered close button row */
+.info-dialog .row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+#infoCloseBtn {
+    margin: 0 auto;
+}
+
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.info-title {
+    margin: 0;
+    font-size: 1.35em;
+    color: var(--accent-color);
+}
+
+.info-close-x {
+    background: transparent;
+    border: none;
+    font-size: 1.5em;
+    color: var(--fg-color);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+.info-close-x:hover {
+    color: var(--accent-color);
+    background: transparent;
+}
+
+.info-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding-right: 4px;
+}
+
+.info-section-title {
+    font-size: 0.95em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-color);
+    margin: 15px 0 8px 0;
+}
+.info-section-title:first-child {
+    margin-top: 0;
+}
+
+.info-card {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.info-card li {
+    margin: 6px 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+/* Footer */
+footer {
+    width: 100%;
+    max-width: 960px;
+    text-align: center;
+    padding: 0 20px;
+    margin: 5px auto 20px auto;
+    font-size: 1.1em;
+    color: var(--fg-color);
+}
+footer p { margin: 0; padding: 0; }
+footer a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 700;
+}
+footer a:hover {
+    text-decoration: underline;
+    color: color-mix(in srgb, var(--accent-color) 80%, black);
+}
+
+/* Responsive adjustments - DO NOT change where the menu shows up */
+@media (max-width: 768px) {
+    .container { padding: 15px; margin: 15px 10px; }
+    h1 { font-size: 1.5em; }
+    #tools button { flex: 0 0 auto; width: 38px; min-width: 38px; }
+    #empty { min-height: 240px; padding: 30px 15px; }
+    #size { flex: 0 0 110px; width: 110px; }
+}
+@media (max-width: 480px) {
+    button { padding: 7px 10px; font-size: 0.85em; }
+    button.small { padding: 5px 8px; font-size: 0.78em; }
+}
+</style>
 </head>
 <body>
 <div class="container">
@@ -192,8 +746,10 @@
   };
 
   // Info Modal Logic
-  const infoDlg = $('infoDlg');$('infoBtn').onclick = () => infoDlg.showModal();
-  $('infoCloseX').onclick = () => infoDlg.close();$('infoCloseBtn').onclick = () => infoDlg.close();
+  const infoDlg = $('infoDlg');
+  $('infoBtn').onclick = () => infoDlg.showModal();
+  $('infoCloseX').onclick = () => infoDlg.close();
+  $('infoCloseBtn').onclick = () => infoDlg.close();
   infoDlg.onclick = e => {
     const rect = infoDlg.getBoundingClientRect();
     if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
@@ -207,11 +763,12 @@
     $('dlgText').textContent = text; $('dlgYes').textContent = yesLabel; onYes = fn;
     $('dlg').showModal();
   }
-  $('dlgNo').onclick = () =>$('dlg').close();
-  $('dlgYes').onclick = () => {$('dlg').close(); if (onYes) onYes(); };
+  $('dlgNo').onclick = () => $('dlg').close();
+  $('dlgYes').onclick = () => { $('dlg').close(); if (onYes) onYes(); };
 
   // Loading images (file picker, paste, drop)
-  const openPicker = () => $('file').click();$('empty').onclick = openPicker;
+  const openPicker = () => $('file').click();
+  $('empty').onclick = openPicker;
   $('empty').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } };
   function load(blob) {
     if (!blob || !blob.type.startsWith('image/')) return;
@@ -223,13 +780,14 @@
       ops = []; cur = null;
       rebuildBase();
       cancelTextEditor(); // clears text UI and paints clean base
-      $('empty').classList.add('hide'); $('stage').classList.remove('hide');$('newimg').classList.remove('hide');
+      $('empty').classList.add('hide'); $('stage').classList.remove('hide'); $('newimg').classList.remove('hide');
       redrawNow();
       URL.revokeObjectURL(url);
     };
     im.src = url;
   }
-  $('file').onchange = e => { load(e.target.files[0]); e.target.value = ''; };$('newimg').onclick = () => { if (ops.length) ask('Open a new image? Your annotations will be lost.', 'Open new', openPicker); else openPicker(); };
+  $('file').onchange = e => { load(e.target.files[0]); e.target.value = ''; };
+  $('newimg').onclick = () => { if (ops.length) ask('Open a new image? Your annotations will be lost.', 'Open new', openPicker); else openPicker(); };
   const dropLoad = f => ops.length ? ask('Replace this image? Your annotations will be lost.', 'Replace', () => load(f)) : load(f);
   addEventListener('paste', e => {
     for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) { dropLoad(it.getAsFile()); break; }
@@ -238,13 +796,12 @@
   addEventListener('dragleave', () => $('empty').classList.remove('over'));
   addEventListener('drop', e => { e.preventDefault(); $('empty').classList.remove('over'); dropLoad(e.dataTransfer.files[0]); });
 
-  // Drawing helpers — exact original censor algorithm (samples + fills on the same ctx)
+  // Drawing helpers — exact censor algorithm (samples + fills on the same ctx)
   function censor(targetCtx, rx, ry, rw, rh, size) {
     const x = Math.max(0, Math.floor(rx)), y = Math.max(0, Math.floor(ry));
     const w = Math.min(cv.width - x, Math.ceil(rw)), h = Math.min(cv.height - y, Math.ceil(rh));
     if (w < 2 || h < 2) return;
     const blk = Math.max(16 * Math.max(1, cv.width / 1000), size * 3);
-    // getImageData returns a copy — safe to then fillRect on the same canvas
     const d = targetCtx.getImageData(x, y, w, h).data;
     for (let by = 0; by < h; by += blk) {
       for (let bx = 0; bx < w; bx += blk) {
@@ -325,7 +882,6 @@
         break;
       }
       case 'censor':
-        // Must run AFTER the image (+ prior ops) are already on targetCtx
         censor(c, rx, ry, rw, rh, o.size);
         break;
       case 'text':
@@ -341,19 +897,16 @@
     baseCtx.clearRect(0, 0, baseCv.width, baseCv.height);
     baseCtx.drawImage(img, 0, 0);
     for (let i = 0; i < ops.length; i++) {
-      // Censor samples whatever is already on base (image + earlier ops) — same as original
       drawOpOn(baseCtx, ops[i]);
     }
   }
 
   function redrawImmediate() {
     if (!img) return;
-    // Fast path: blit the committed layer, then only the live stroke / text preview
     ctx.clearRect(0, 0, cv.width, cv.height);
     ctx.drawImage(baseCv, 0, 0);
 
     if (cur) {
-      // Censor needs the image under the selection already on ctx (from the blit above)
       drawOpOn(ctx, cur);
       if (cur.tool === 'censor') {
         const x = Math.min(cur.a[0], cur.b[0]), y = Math.min(cur.a[1], cur.b[1]);
@@ -520,7 +1073,7 @@
   }
 
   $('size').addEventListener('input', () => {
-    $('sizeVal').textContent =$('size').value;
+    $('sizeVal').textContent = $('size').value;
     if (!textEditor.classList.contains('hide')) { redraw(); positionTextEditor(); }
   });
 
@@ -613,7 +1166,6 @@
     if (eyedropActive) {
       const x = Math.max(0, Math.min(cv.width - 1, Math.floor(p[0])));
       const y = Math.max(0, Math.min(cv.height - 1, Math.floor(p[1])));
-      // Sample committed layer (image + annotations) so picks match what you see
       const d = baseCtx.getImageData(x, y, 1, 1).data;
       const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
       palette[sel] = hex;
@@ -651,7 +1203,6 @@
     const p = pos(e);
     cur.b = p;
     if (cur.tool === 'pen') {
-      // Skip points that are extremely close — keeps path light without changing feel
       const last = cur.pts[cur.pts.length - 1];
       if (!last || (p[0] - last[0]) * (p[0] - last[0]) + (p[1] - last[1]) * (p[1] - last[1]) > 2.25) {
         cur.pts.push(p);
@@ -671,10 +1222,6 @@
     const moved = Math.hypot(cur.b[0] - cur.a[0], cur.b[1] - cur.a[1]) > 3;
     if (moved || cur.tool === 'pen') {
       ops.push(cur);
-      // Censor must sample the pre-censor pixels. Writing onto the same
-      // canvas we just read from is unsafe, so always rebuild the base layer.
-      // For other tools an incremental draw would be fine, but rebuild is
-      // still cheap with the cached approach and keeps one code path.
       rebuildBase();
     }
     cur = null;
@@ -688,7 +1235,6 @@
     if (tool === 'text') cancelTextEditor();
     tool = b.dataset.tool;
     document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x === b));
-    // Choosing a drawing tool turns off the eyedropper
     if (eyedropActive) setEyedrop(false);
   });
 
@@ -705,7 +1251,7 @@
   });
 
   function downloadCanvas(type, extension, quality) {
-    redrawNow(); // ensure canvas is fully painted before export
+    redrawNow();
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const a = document.createElement('a');
     a.download = 'annotated-' + stamp + '.' + extension;
@@ -724,8 +1270,6 @@
   }
 })();
 </script>
-
-</div>
 
 <footer>
   <p><a href="https://github.com/MattiasMilger/Web-Image-Editor-by-Mattias" target="_blank" rel="noopener noreferrer">GitHub Repository</a></p>
