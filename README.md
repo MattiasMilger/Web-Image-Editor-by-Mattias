@@ -58,7 +58,7 @@ Web Image Editor by Mattias/
 
 ## Browser Support
 
-Works in all modern browsers (Chrome, Firefox, Edge, Safari). Requires JavaScript enabled.
+Works in all modern browsers (Chrome, Firefox, Edge, Safari).
 
 ## Credits
 
