@@ -371,22 +371,9 @@ main {
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     touch-action: none;
-}
-
-#textEditor {
-    position: absolute;
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 8px;
-    background: rgba(20, 20, 20, 0.4);
-    border: 1px solid rgba(46, 204, 113, 0.7);
-    border-radius: 8px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-    cursor: move;
-    backdrop-filter: blur(2px);
+    background-color: #ffffff;
+    background-image: conic-gradient(#cccccc 25%, #ffffff 0 50%, #cccccc 0 75%, #ffffff 0);
+    background-size: 16px 16px;
 }
 
 #textInput {
@@ -400,14 +387,11 @@ main {
     pointer-events: none;
 }
 
-.text-actions {
-    display: flex;
-    gap: 6px;
-}
 
-.text-actions button {
-    padding: 5px 12px;
-    font-size: 0.85em;
+/* Highlight the canvas while a file is dragged over the page */
+#stage.over {
+    outline: 2px dashed var(--accent-color);
+    outline-offset: -4px;
 }
 
 /* Dialog / Modal styles */
@@ -425,6 +409,47 @@ dialog::backdrop { background-color: rgba(0, 0, 0, 0.6); }
 dialog p { margin: 0 0 20px 0; font-size: 1.05em; line-height: 1.5; }
 dialog .row { display: flex; justify-content: flex-end; gap: 10px; }
 dialog button { min-width: 90px; }
+
+/* Blank image dialog */
+.blank-fields { display: flex; gap: 12px; margin-bottom: 12px; }
+.blank-fields label {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+.blank-fields input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--entry-bg);
+    color: var(--fg-color);
+    font: inherit;
+}
+.blank-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+#blankBtn { margin-top: 14px; }
+
+/* Checkerboard behind transparent areas of the canvas, and on the "transparent" swatch */
+.swatch-clear {
+    background-color: #ffffff;
+    background-image: conic-gradient(#bbbbbb 25%, transparent 0 50%, #bbbbbb 0 75%, transparent 0);
+    background-size: 10px 10px;
+}
+.edit-color.disabled { opacity: 0.45; pointer-events: none; }
+.blank-fields select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--entry-bg);
+    color: var(--fg-color);
+    font: inherit;
+}
+.blank-fields input[type="color"] { height: 32px; padding: 2px; cursor: pointer; }
+.blank-fields input[type="color"]:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Info Dialog Specific Styling */
 .info-dialog {
