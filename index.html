@@ -366,7 +366,7 @@ main {
     position: relative;
     z-index: 1;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: flex-start;
     overflow: auto;
     background-color: var(--canvas-bg);
@@ -383,6 +383,8 @@ main {
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     touch-action: none;
+    flex: 0 0 auto;
+    margin: 0 auto;
     background-color: #ffffff;
     background-image: conic-gradient(#cccccc 25%, #ffffff 0 50%, #cccccc 0 75%, #ffffff 0);
     background-size: 16px 16px;
@@ -462,6 +464,16 @@ dialog button { min-width: 90px; }
 }
 .blank-fields input[type="color"] { height: 32px; padding: 2px; cursor: pointer; }
 .blank-fields input[type="color"]:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Zoom: when zoomed the stage scrolls inside itself instead of growing the page */
+#stage.zoomed {
+    max-height: 80vh;
+    max-height: 80dvh;
+}
+#zoomLabel {
+    min-width: 58px;
+    font-variant-numeric: tabular-nums;
+}
 
 /* Info Dialog Specific Styling */
 .info-dialog {
@@ -653,6 +665,16 @@ footer a:hover {
     </div>
   </section>
 
+  <section class="panel" aria-labelledby="lblZoom">
+    <h3 class="panel-title" id="lblZoom">Zoom</h3>
+    <div class="group">
+      <button id="zoomOut" class="small" title="Zoom out (-)" aria-label="Zoom out" disabled>&minus;</button>
+      <button id="zoomLabel" class="small" title="Reset to 100%" disabled>100%</button>
+      <button id="zoomIn" class="small" title="Zoom in (+)" aria-label="Zoom in" disabled>+</button>
+      <button id="zoomFit" class="small" title="Fit to window (0)" disabled>Fit</button>
+    </div>
+  </section>
+
   <section class="panel" aria-labelledby="lblEdit">
     <h3 class="panel-title" id="lblEdit">Edit</h3>
     <div class="group">
@@ -747,6 +769,7 @@ footer a:hover {
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular outlines.</li>
         <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks.</li>
         <li><strong>Text:</strong> Click the image and type. Drag the text to move it and drag a corner handle to resize it, then click anywhere outside it (or press Enter) to place it. Esc cancels.</li>
+        <li><strong>Zoom:</strong> Use the Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / &minus; / 0 keys. Pan by scrolling, holding Space and dragging, or middle-mouse dragging. On touch screens use two fingers to pan and pinch.</li>
         <li><strong>Blank image:</strong> Start from a blank canvas of any size with a colour (white by default) or transparent background, then draw, insert images and add text on it.</li>
         <li><strong>Transparent colour:</strong> The checkerboard swatch erases to transparency with any tool. Download PNG to keep it (JPG fills transparent areas with white).</li>
         <li><strong>Insert image:</strong> With an image open, drop, paste (Ctrl+V) or use <em>Insert image</em> to add another picture on top. Drag it to move and drag the handles to resize (hold Shift on a corner to keep proportions). Click anywhere outside it to place it, or press Esc to cancel.</li>
@@ -835,9 +858,11 @@ footer a:hover {
       baseCv.width = cv.width; baseCv.height = cv.height;
       ops = []; cur = null;
       ov = null; ovDrag = null;
+      zoom = null; applyZoom();
       rebuildBase();
       cancelTextEditor(); // clears text UI and paints clean base
       $('empty').classList.add('hide'); $('stage').classList.remove('hide'); $('newimg').classList.remove('hide'); $('insertimg').classList.remove('hide');
+      updateZoomUI();
       redrawNow();
       URL.revokeObjectURL(url);
     };
@@ -1391,6 +1416,140 @@ footer a:hover {
     else if (e.key === 'Escape') { e.preventDefault(); cancelOverlay(); }
   });
 
+  // ---- Zoom & pan ----
+  let zoom = null;                       // null = fit to window, otherwise displayed scale (1 = 100%)
+  const ZOOM_MIN = 0.05, ZOOM_MAX = 16;
+  const shownScale = () => cv.getBoundingClientRect().width / Math.max(1, cv.width);
+
+  function updateZoomUI() {
+    const has = !!img;
+    $('zoomLabel').textContent = has ? Math.round(shownScale() * 100) + '%' : '100%';
+    for (const id of ['zoomIn', 'zoomOut', 'zoomLabel', 'zoomFit']) $(id).disabled = !has;
+  }
+
+  function applyZoom() {
+    const stage = $('stage');
+    if (zoom == null) { cv.style.width = ''; cv.style.maxWidth = ''; stage.classList.remove('zoomed'); }
+    else { cv.style.width = (cv.width * zoom) + 'px'; cv.style.maxWidth = 'none'; stage.classList.add('zoomed'); }
+    updateZoomUI();
+  }
+
+  // Zoom to z (null = fit), keeping the point under (cx, cy) in client coords fixed
+  function setZoom(z, cx, cy) {
+    if (!img) return;
+    const stage = $('stage');
+    const before = cv.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    if (cx == null) { // default anchor: centre of the visible part of the stage
+      cx = (Math.max(sr.left, 0) + Math.min(sr.right, innerWidth)) / 2;
+      cy = (Math.max(sr.top, 0) + Math.min(sr.bottom, innerHeight)) / 2;
+    }
+    const fx = (cx - before.left) / Math.max(1, before.width), fy = (cy - before.top) / Math.max(1, before.height);
+    zoom = z == null ? null : Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+    applyZoom();
+    if (zoom == null) { stage.scrollLeft = 0; stage.scrollTop = 0; }
+    else {
+      const after = cv.getBoundingClientRect();
+      stage.scrollLeft += after.left + fx * after.width - cx;
+      stage.scrollTop += after.top + fy * after.height - cy;
+    }
+    redraw();
+  }
+
+  $('zoomIn').onclick = () => setZoom(shownScale() * 1.25);
+  $('zoomOut').onclick = () => setZoom(shownScale() / 1.25);
+  $('zoomLabel').onclick = () => setZoom(1);
+  $('zoomFit').onclick = () => setZoom(null);
+
+  // Ctrl/Cmd + wheel (also trackpad pinch) zooms around the pointer
+  $('stage').addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey) || !img) return;
+    e.preventDefault();
+    setZoom(shownScale() * Math.pow(1.0015, -e.deltaY), e.clientX, e.clientY);
+  }, { passive: false });
+
+  // The handles / dashed boxes are sized in screen pixels, so redraw when the displayed size changes
+  new ResizeObserver(() => { updateZoomUI(); if (ov || textCanvasPos) redraw(); }).observe(cv);
+
+  // Panning: Space + drag, middle mouse, or two fingers (which also pinch-zoom)
+  let spaceDown = false, pan = null, pinch = null;
+  const touches = new Map(); // pointerId -> [clientX, clientY]
+
+  function panBegin(e) {
+    if (e.pointerType === 'touch') {
+      touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if (touches.size === 2) {
+        cur = null; ovDrag = null; draggingOnCanvas = false; textResize = null; // abandon the one-finger action
+        redraw();
+        const [a, b] = [...touches.values()];
+        pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, s0: shownScale(), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 };
+        return true;
+      }
+      return touches.size > 2;
+    }
+    if (spaceDown || e.button === 1) {
+      const st = $('stage');
+      pan = { x: e.clientX, y: e.clientY, sl: st.scrollLeft, st: st.scrollTop };
+      cv.setPointerCapture(e.pointerId);
+      cv.style.cursor = 'grabbing';
+      e.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
+  function panMove(e) {
+    if (e.pointerType === 'touch' && touches.has(e.pointerId)) {
+      touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if (!pinch) return false;
+      const [a, b] = [...touches.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      setZoom(pinch.s0 * d / pinch.d0, mx, my);
+      const st = $('stage');
+      st.scrollLeft -= mx - pinch.mx;
+      st.scrollTop -= my - pinch.my;
+      pinch.mx = mx; pinch.my = my;
+      return true;
+    }
+    if (pan) {
+      const st = $('stage');
+      st.scrollLeft = pan.sl - (e.clientX - pan.x);
+      st.scrollTop = pan.st - (e.clientY - pan.y);
+      return true;
+    }
+    if (spaceDown && !cur && !ovDrag && !textResize && !draggingOnCanvas) { cv.style.cursor = 'grab'; return true; }
+    return false;
+  }
+
+  function panEnd(e) {
+    let handled = false;
+    if (e.pointerType === 'touch') {
+      touches.delete(e.pointerId);
+      if (pinch) { handled = true; if (touches.size < 2) pinch = null; }
+    }
+    if (pan) { pan = null; cv.style.cursor = spaceDown ? 'grab' : 'crosshair'; handled = true; }
+    return handled;
+  }
+
+  // Keyboard: + / - / 0 for zoom, hold Space to pan (ignored while typing or in dialogs)
+  const viewKeysOk = e => img && !e.ctrlKey && !e.metaKey && !e.altKey && !textActive() &&
+    !$('dlg').open && !infoDlg.open && !blankDlg.open &&
+    (e.target === document.body || e.target === cv);
+  addEventListener('keydown', e => {
+    if (!viewKeysOk(e)) return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom(shownScale() * 1.25); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(shownScale() / 1.25); }
+    else if (e.key === '0') { e.preventDefault(); setZoom(null); }
+    else if (e.code === 'Space') {
+      e.preventDefault();
+      if (!spaceDown) { spaceDown = true; if (!cur && !ovDrag) cv.style.cursor = 'grab'; }
+    }
+  });
+  addEventListener('keyup', e => {
+    if (e.code !== 'Space' || !spaceDown) return;
+    spaceDown = false;
+    if (!pan) cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
+  });
+
   const pos = e => {
     const r = cv.getBoundingClientRect();
     return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height];
@@ -1398,6 +1557,7 @@ footer a:hover {
 
   cv.addEventListener('pointerdown', e => {
     if (!img) return;
+    if (panBegin(e)) return;
 
     if (ov) {
       const p = pos(e), hit = ovHit(p);
@@ -1461,6 +1621,7 @@ footer a:hover {
   });
 
   cv.addEventListener('pointermove', e => {
+    if (panMove(e)) return;
     if (ov) {
       const p = pos(e);
       if (ovDrag) ovUpdateDrag(p, e.shiftKey);
@@ -1524,8 +1685,8 @@ footer a:hover {
     cur = null;
     redrawNow();
   };
-  cv.addEventListener('pointerup', end);
-  cv.addEventListener('pointercancel', end);
+  cv.addEventListener('pointerup', e => { if (!panEnd(e)) end(); });
+  cv.addEventListener('pointercancel', e => { if (!panEnd(e)) end(); });
 
   $('tools').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;

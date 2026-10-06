@@ -21,6 +21,7 @@ Open `index.html` in a modern browser. No build tools or dependencies required.
 - **Blank image** - Start from a blank canvas (pick a size or a preset, and a colour (white by default) or transparent background) instead of opening a picture, then draw, insert images and add text on it.
 - **Transparent colour** - The checkerboard swatch erases to transparency with any tool (paint, shapes, text). Download PNG to keep the transparency; JPG fills it with white.
 - **Insert image** - Drop, paste (Ctrl+V) or pick another image to add it on top of the current one. Drag to move, drag the corner / edge handles to resize freely (Shift on a corner keeps proportions), then click outside it (or press Enter) to lock it in. Esc cancels.
+- **Zoom & pan** - Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / - / 0 keys. Pan by scrolling, Space + drag, or middle-mouse drag; on touch screens use two fingers to pan and pinch. All tools keep working while zoomed.
 - **Colour & Size** - Shared colour picker, swatches, and size slider for all tools except Text, which is resized with its corner handles.
 - **Undo / Clear** - Undo last annotation or clear everything (with confirmation).
 - **Download** - Export as PNG or high-quality JPG.
