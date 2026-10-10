@@ -583,6 +583,16 @@ footer a:hover {
     color: color-mix(in srgb, var(--accent-color) 80%, black);
 }
 
+/* Discreet link back to the portfolio, last line of the page */
+footer .footer-portfolio {
+    margin-top: 8px;
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+footer .footer-portfolio a {
+    font-weight: 400;
+}
+
 /* Responsive adjustments - DO NOT change where the menu shows up */
 @media (max-width: 768px) {
     .container { padding: 15px; margin: 15px 10px; }
@@ -1750,6 +1760,7 @@ footer a:hover {
 
 <footer>
   <p><a href="https://github.com/MattiasMilger/Web-Image-Editor-by-Mattias" target="_blank" rel="noopener noreferrer">GitHub Repository</a></p>
+  <p class="footer-portfolio">More projects? <a href="https://mattiasmilger.github.io/" target="_blank" rel="noopener noreferrer">Visit my portfolio</a></p>
 </footer>
 
 </body>
