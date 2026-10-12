@@ -15,8 +15,8 @@ Open `index.html` in a modern browser. No build tools or dependencies required.
 - **Paint** - Freehand drawing with adjustable size and colour.
 - **Arrow** - Draw clean open arrowheads to point things out.
 - **Line** - Free-direction lines for underlining or highlighting.
-- **Box** - Draw rectangular outlines.
-- **Censor** - Pixelate / block out sensitive areas with large average-colour blocks.
+- **Box & Circle** - Draw rectangles and circles / ellipses. The **Shape** panel switches between outline and filled.
+- **Censor** - Pixelate / block out sensitive areas with average-colour blocks. The Size slider sets the block size.
 - **Text** - Place text directly on the image. Click, type, drag to move, drag a corner handle to resize, then click outside it to place it.
 - **Blank image** - Start from a blank canvas (pick a size or a preset, and a colour (white by default) or transparent background) instead of opening a picture, then draw, insert images and add text on it.
 - **Transparent colour** - The checkerboard swatch erases to transparency with any tool (paint, shapes, text). Download PNG to keep the transparency; JPG fills it with white.
@@ -45,7 +45,7 @@ Web Image Editor by Mattias/
 ## How It Works
 
 1. Load an image by clicking the empty area, dragging a file, or pasting (Ctrl+V / Cmd+V) - or click **Blank image** to start with a blank canvas.
-2. Select a tool (Paint, Arrow, Line, Box, Censor, or Text).
+2. Select a tool (Paint, Arrow, Line, Box, Circle, Censor, or Text).
 3. Draw or place annotations using the current colour and size.
 4. To **insert an image**: drop, paste, or click **Insert image** while an image is open. Move and resize it, then click anywhere outside it (or press Enter) to place it.
 5. For **Text**: click on the image, type, drag the text to move it and a corner handle to resize it, then click anywhere outside it (or press Enter) to place it.
@@ -58,7 +58,7 @@ Web Image Editor by Mattias/
 - **Client-side only** - No data is transmitted to any server. Images and annotations exist only in the browser.
 - **Canvas-based** - Annotations are drawn on an HTML5 canvas over the original image.
 - **Pointer events** - Supports mouse, touch, and pen input.
-- **Censor** - Uses large average-colour blocks so text under the censored area cannot be recovered.
+- **Censor** - Uses average-colour blocks so text under the censored area cannot be recovered.
 - **Theme** - The selected theme is saved in `localStorage` and restored on the next visit.
 
 ## Browser Support

@@ -319,6 +319,16 @@ button.small { padding: 5px 10px; font-size: 0.8em; }
 
 .hide { display: none !important; }
 
+/* Shape fill toggle (Box / Circle) */
+#fillOpts button[aria-pressed="true"] {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: transparent;
+}
+#fillOpts button[aria-pressed="true"]:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--accent-color) 80%, black);
+}
+
 main {
     position: relative;
     min-height: 320px;

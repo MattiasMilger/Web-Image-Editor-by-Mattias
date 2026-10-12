@@ -331,6 +331,16 @@ button.small { padding: 5px 10px; font-size: 0.8em; }
 
 .hide { display: none !important; }
 
+/* Shape fill toggle (Box / Circle) */
+#fillOpts button[aria-pressed="true"] {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: transparent;
+}
+#fillOpts button[aria-pressed="true"]:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--accent-color) 80%, black);
+}
+
 main {
     position: relative;
     min-height: 320px;
@@ -630,10 +640,10 @@ footer .footer-portfolio a {
       <button data-tool="line" aria-pressed="false" title="Draw a straight line" aria-label="Line">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="19" x2="19" y2="5"/></svg>
       </button>
-      <button data-tool="rect" aria-pressed="false" title="Draw a rectangle outline" aria-label="Box">
+      <button data-tool="rect" aria-pressed="false" title="Draw a rectangle (outline or filled)" aria-label="Box">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1"/></svg>
       </button>
-      <button data-tool="circle" aria-pressed="false" title="Draw a circle outline" aria-label="Circle">
+      <button data-tool="circle" aria-pressed="false" title="Draw a circle (outline or filled)" aria-label="Circle">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
       </button>
       <button data-tool="censor" aria-pressed="false" title="Pixelate an area" aria-label="Censor">
@@ -646,6 +656,14 @@ footer .footer-portfolio a {
       <button data-tool="text" aria-pressed="false" title="Add text" aria-label="Text">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M8 19h8"/></svg>
       </button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="lblFill">
+    <h3 class="panel-title" id="lblFill">Shape</h3>
+    <div class="group" role="group" aria-label="Shape fill" id="fillOpts">
+      <button type="button" class="small" data-fill="0" aria-pressed="true" disabled title="Outline only (Box and Circle)">Outline</button>
+      <button type="button" class="small" data-fill="1" aria-pressed="false" disabled title="Solid fill (Box and Circle)">Filled</button>
     </div>
   </section>
 
@@ -776,8 +794,8 @@ footer .footer-portfolio a {
       <ul>
         <li><strong>Paint:</strong> Freehand drawing tool with custom sizing and color swatches.</li>
         <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads.</li>
-        <li><strong>Box & Circle:</strong> Draw precise rectangular or circular outlines.</li>
-        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks.</li>
+        <li><strong>Box & Circle:</strong> Draw precise rectangular or circular shapes. Use the Shape option to choose outline or filled.</li>
+        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size slider sets the block size.</li>
         <li><strong>Text:</strong> Click the image and type. Drag the text to move it and drag a corner handle to resize it, then click anywhere outside it (or press Enter) to place it. Esc cancels.</li>
         <li><strong>Zoom:</strong> Use the Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / &minus; / 0 keys. Pan by scrolling, holding Space and dragging, or middle-mouse dragging. On touch screens use two fingers to pan and pinch.</li>
         <li><strong>Blank image:</strong> Start from a blank canvas of any size with a colour (white by default) or transparent background, then draw, insert images and add text on it.</li>
@@ -807,7 +825,7 @@ footer .footer-portfolio a {
   // re-draw the full history on every pointermove (main source of sluggishness).
   const baseCv = document.createElement('canvas');
   const baseCtx = baseCv.getContext('2d', { willReadFrequently: true });
-  let img = null, ops = [], cur = null, tool = 'pen';
+  let img = null, ops = [], cur = null, tool = 'pen', fillShapes = false;
   let ov = null, ovDrag = null; // floating inserted image + its current drag state
   let transparentSel = false;   // true when the transparent (erase) swatch is the active colour
   function curColor() { return transparentSel ? 'transparent' : $('color').value; }
@@ -935,7 +953,7 @@ footer .footer-portfolio a {
     const x = Math.max(0, Math.floor(rx)), y = Math.max(0, Math.floor(ry));
     const w = Math.min(cv.width - x, Math.ceil(rw)), h = Math.min(cv.height - y, Math.ceil(rh));
     if (w < 2 || h < 2) return;
-    const blk = Math.max(16 * Math.max(1, cv.width / 1000), size * 3);
+    const blk = Math.max(6 * Math.max(1, cv.width / 1000), size * 2);
     const d = targetCtx.getImageData(x, y, w, h).data;
     for (let by = 0; by < h; by += blk) {
       for (let bx = 0; bx < w; bx += blk) {
@@ -1008,13 +1026,13 @@ footer .footer-portfolio a {
         c.lineTo(x2, y2);
         c.stroke();
         break;
-      case 'rect': c.strokeRect(rx, ry, rw, rh); break;
+      case 'rect': if (o.fill) c.fillRect(rx, ry, rw, rh); else c.strokeRect(rx, ry, rw, rh); break;
       case 'circle': {
         c.beginPath();
         const rxRadius = rw / 2;
         const ryRadius = rh / 2;
         c.ellipse(rx + rxRadius, ry + ryRadius, Math.abs(rxRadius), Math.abs(ryRadius), 0, 0, Math.PI * 2);
-        c.stroke();
+        if (o.fill) c.fill(); else c.stroke();
         break;
       }
       case 'pen': {
@@ -1626,7 +1644,7 @@ footer .footer-portfolio a {
     }
 
     cv.setPointerCapture(e.pointerId);
-    cur = { tool, color: curColor(), size: scaled(), a: p, b: p, pts: [p] };
+    cur = { tool, color: curColor(), size: scaled(), fill: fillShapes, a: p, b: p, pts: [p] };
     redraw();
   });
 
@@ -1704,7 +1722,23 @@ footer .footer-portfolio a {
     tool = b.dataset.tool;
     document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x === b));
     if (eyedropActive) setEyedrop(false);
+    syncFillUI();
   });
+
+  // Outline / Filled choice only applies to Box and Circle
+  function syncFillUI() {
+    const on = tool === 'rect' || tool === 'circle';
+    document.querySelectorAll('#fillOpts button').forEach(x => {
+      x.disabled = !on;
+      x.setAttribute('aria-pressed', (x.dataset.fill === '1') === fillShapes);
+    });
+  }
+  $('fillOpts').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    fillShapes = b.dataset.fill === '1';
+    syncFillUI();
+  });
+  syncFillUI();
 
   $('eyedropBtn').onclick = () => {
     if (textActive()) placeText();
