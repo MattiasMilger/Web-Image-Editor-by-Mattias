@@ -305,17 +305,30 @@ button.small { padding: 5px 10px; font-size: 0.8em; }
 #color::-webkit-color-swatch { border: 1px solid rgba(0, 0, 0, 0.4); border-radius: 3px; }
 
 /* --- Size --- */
-#size {
+#sizeSlider {
     width: 120px;
     accent-color: var(--accent-color);
     cursor: pointer;
 }
-#sizeVal {
-    min-width: 2ch;
-    text-align: right;
+#size {
+    width: 42px;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--entry-bg);
+    color: var(--fg-color);
+    font: inherit;
     font-weight: bold;
     font-variant-numeric: tabular-nums;
+    text-align: center;
 }
+#size { -moz-appearance: textfield; appearance: textfield; }
+#size::-webkit-outer-spin-button,
+#size::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#sizeDown, #sizeUp { width: 28px; height: 28px; padding: 0; line-height: 1; font-size: 1em; }
+#size:focus { outline: 2px solid var(--accent-color); outline-offset: 1px; }
+#size.invalid { border-color: var(--error-color); outline-color: var(--error-color); }
 
 .hide { display: none !important; }
 
@@ -584,7 +597,7 @@ footer .footer-portfolio a {
     h1 { font-size: 1.5em; }
     #tools button { flex: 0 0 auto; width: 38px; min-width: 38px; }
     #empty { min-height: 240px; padding: 30px 15px; }
-    #size { flex: 0 0 110px; width: 110px; }
+    #sizeSlider { flex: 0 0 110px; width: 110px; }
 
     /* Leave room so the bottom bar never covers the image or footer */
     body { padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px)); }

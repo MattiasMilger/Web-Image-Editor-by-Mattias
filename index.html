@@ -317,17 +317,30 @@ button.small { padding: 5px 10px; font-size: 0.8em; }
 #color::-webkit-color-swatch { border: 1px solid rgba(0, 0, 0, 0.4); border-radius: 3px; }
 
 /* --- Size --- */
-#size {
+#sizeSlider {
     width: 120px;
     accent-color: var(--accent-color);
     cursor: pointer;
 }
-#sizeVal {
-    min-width: 2ch;
-    text-align: right;
+#size {
+    width: 42px;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--entry-bg);
+    color: var(--fg-color);
+    font: inherit;
     font-weight: bold;
     font-variant-numeric: tabular-nums;
+    text-align: center;
 }
+#size { -moz-appearance: textfield; appearance: textfield; }
+#size::-webkit-outer-spin-button,
+#size::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#sizeDown, #sizeUp { width: 28px; height: 28px; padding: 0; line-height: 1; font-size: 1em; }
+#size:focus { outline: 2px solid var(--accent-color); outline-offset: 1px; }
+#size.invalid { border-color: var(--error-color); outline-color: var(--error-color); }
 
 .hide { display: none !important; }
 
@@ -609,7 +622,7 @@ footer .footer-portfolio a {
     h1 { font-size: 1.5em; }
     #tools button { flex: 0 0 auto; width: 38px; min-width: 38px; }
     #empty { min-height: 240px; padding: 30px 15px; }
-    #size { flex: 0 0 110px; width: 110px; }
+    #sizeSlider { flex: 0 0 110px; width: 110px; }
 }
 @media (max-width: 480px) {
     button { padding: 7px 10px; font-size: 0.85em; }
@@ -688,8 +701,10 @@ footer .footer-portfolio a {
   <section class="panel" aria-labelledby="lblSize">
     <h3 class="panel-title" id="lblSize">Size</h3>
     <div class="group">
-      <input id="size" type="range" min="2" max="48" value="6" aria-label="Size">
-      <output id="sizeVal" for="size">6</output>
+      <input id="sizeSlider" type="range" min="0" max="200" step="1" aria-label="Size slider">
+      <button id="sizeDown" type="button" aria-label="Decrease size" title="Decrease size">&minus;</button>
+      <input id="size" type="number" inputmode="numeric" min="1" max="48" step="1" value="6" aria-label="Size (1 to 48)" title="Type a whole number from 1 to 48">
+      <button id="sizeUp" type="button" aria-label="Increase size" title="Increase size">+</button>
     </div>
   </section>
 
@@ -795,7 +810,7 @@ footer .footer-portfolio a {
         <li><strong>Paint:</strong> Freehand drawing tool with custom sizing and color swatches.</li>
         <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads.</li>
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular shapes. Use the Shape option to choose outline or filled.</li>
-        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size slider sets the block size.</li>
+        <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size setting sets the block size.</li>
         <li><strong>Text:</strong> Click the image and type. Drag the text to move it and drag a corner handle to resize it, then click anywhere outside it (or press Enter) to place it. Esc cancels.</li>
         <li><strong>Zoom:</strong> Use the Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / &minus; / 0 keys. Pan by scrolling, holding Space and dragging, or middle-mouse dragging. On touch screens use two fingers to pan and pinch.</li>
         <li><strong>Blank image:</strong> Start from a blank canvas of any size with a colour (white by default) or transparent background, then draw, insert images and add text on it.</li>
@@ -1008,7 +1023,7 @@ footer .footer-portfolio a {
     switch (o.tool) {
       case 'arrow': {
         const ang = Math.atan2(y2 - y1, x2 - x1);
-        const head = Math.max(14, o.size * 4);
+        const head = Math.max(Math.min(14, o.size * 7), o.size * 4); // same as before for size >= 2, smaller heads for thinner arrows
         c.beginPath();
         c.moveTo(x1, y1);
         c.lineTo(x2, y2);
@@ -1130,7 +1145,7 @@ footer .footer-portfolio a {
   let canvasDragOffsetX = 0, canvasDragOffsetY = 0;
 
   function scaled() {
-    return +$('size').value * Math.max(1, cv.width / 1000);
+    return lastGoodSize * Math.max(1, cv.width / 1000);
   }
 
   // Box around the in-progress text: used for drawing, corner handles and hit-testing
@@ -1254,9 +1269,47 @@ footer .footer-portfolio a {
            p[1] >= bounds.y - pad && p[1] <= bounds.y + bounds.h + pad;
   }
 
-  $('size').addEventListener('input', () => {
-    $('sizeVal').textContent = $('size').value;
+  // Size: slider (logarithmic, so small sizes are easy to hit) and number box stay in sync.
+  // Allowed range 1 - 48 (whole numbers), standard size 6.
+  const SIZE_MIN = 1, SIZE_MAX = 48, SIZE_DEFAULT = 6, SLIDER_STEPS = 200;
+  const sizeSlider = $('sizeSlider'), sizeBox = $('size');
+  const sizeFromSlider = pos => SIZE_MIN * Math.pow(SIZE_MAX / SIZE_MIN, pos / SLIDER_STEPS);
+  const sliderFromSize = v => Math.log(v / SIZE_MIN) / Math.log(SIZE_MAX / SIZE_MIN) * SLIDER_STEPS;
+  const roundSize = v => Math.round(v);
+  const clampSize = v => Math.max(SIZE_MIN, Math.min(SIZE_MAX, v));
+  const sizeOk = v => Number.isInteger(v) && v >= SIZE_MIN && v <= SIZE_MAX;
+  let lastGoodSize = SIZE_DEFAULT;
+
+  function setSize(v, from) {
+    v = roundSize(clampSize(v));
+    lastGoodSize = v;
+    if (from !== 'box') sizeBox.value = v;
+    if (from !== 'slider') sizeSlider.value = sliderFromSize(v);
+    sizeBox.classList.remove('invalid');
+  }
+  sizeSlider.addEventListener('input', () => setSize(sizeFromSlider(+sizeSlider.value), 'slider'));
+  $('sizeDown').onclick = () => setSize(lastGoodSize - 1);
+  $('sizeUp').onclick = () => setSize(lastGoodSize + 1);
+
+  // While typing: apply valid whole numbers immediately, flag decimals and anything out of range
+  sizeBox.addEventListener('input', () => {
+    const raw = sizeBox.value.trim(), v = parseFloat(raw);
+    if (raw !== '' && sizeOk(v)) setSize(v, 'box');
+    else sizeBox.classList.toggle('invalid', raw !== '');
   });
+  // On commit: round decimals, clamp out-of-range numbers, restore the last good size for empty / invalid input
+  function commitSizeBox() {
+    const v = parseFloat(sizeBox.value);
+    setSize(isFinite(v) ? v : lastGoodSize);
+  }
+  sizeBox.addEventListener('change', commitSizeBox);
+  sizeBox.addEventListener('blur', commitSizeBox);
+  sizeBox.addEventListener('keydown', e => {
+    e.stopPropagation(); // keep Enter / Esc / Ctrl+Z here instead of triggering overlay or undo shortcuts
+    if (e.key === 'Enter') { e.preventDefault(); commitSizeBox(); sizeBox.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); sizeBox.value = lastGoodSize; sizeBox.classList.remove('invalid'); sizeBox.blur(); }
+  });
+  setSize(SIZE_DEFAULT);
 
   const DEFAULT_PALETTE = ['#ff1a1a', '#000000', '#ffffff', '#00c853', '#ffe600'];
   const PALETTE_KEY = 'web-image-editor-palette';
