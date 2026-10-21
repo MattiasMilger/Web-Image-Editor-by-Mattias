@@ -422,6 +422,10 @@ main {
     border: none;
     outline: none;
     pointer-events: none;
+    resize: none;
+    overflow: hidden;
+    white-space: pre;
+    font: bold 16px Arial, Helvetica, sans-serif;
 }
 
 
@@ -487,6 +491,37 @@ dialog button { min-width: 90px; }
 }
 .blank-fields input[type="color"] { height: 32px; padding: 2px; cursor: pointer; }
 .blank-fields input[type="color"]:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Image sub menu */
+.popover {
+    position: fixed;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 270px;
+    max-width: calc(100vw - 16px);
+    padding: 12px;
+    background-color: var(--container-bg);
+    color: var(--fg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.pop-title { font-size: 0.72em; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); }
+#downloadPop { width: 230px; }
+#downloadBtn svg { vertical-align: -2px; }
+.menu-list { display: flex; flex-direction: column; gap: 6px; }
+.menu-list button { width: 100%; text-align: left; }
+
+/* Canvas size dialog */
+.anchor-box { display: flex; flex-direction: column; gap: 6px; font-size: 0.85em; font-weight: bold; }
+.anchor-grid { display: grid; grid-template-columns: repeat(3, 28px); gap: 4px; }
+dialog .anchor-grid button { min-width: 0; width: 28px; height: 28px; padding: 0; }
+.anchor-grid button[aria-pressed="true"] { background-color: var(--accent-color); border-color: transparent; }
+dialog .hint { margin: 0 0 14px 0; }
+dialog .cv-msg { margin: 0 0 12px 0; min-height: 1.2em; font-size: 0.85em; color: var(--error-color); }
+.blank-fields input:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Zoom: when zoomed the stage scrolls inside itself instead of growing the page */
 #stage.zoomed {
@@ -729,12 +764,8 @@ footer .footer-portfolio a {
   <section class="panel" aria-labelledby="lblFile">
     <h3 class="panel-title" id="lblFile">Image</h3>
     <div class="group">
-      <button id="blankimg" title="Start with a blank white canvas">Blank image</button>
-      <button id="newimg" class="hide">New image</button>
-      <button id="insertimg" class="hide" title="Add another image on top (you can also drop or paste one)">Insert image</button>
-      <button id="copy" class="hide">Copy</button>
-      <button id="save" class="primary" disabled>Download PNG</button>
-      <button id="saveJpg" class="primary" disabled>Download JPG</button>
+      <button id="imageBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Open, create, insert and copy images">Image &#9662;</button>
+      <button id="downloadBtn" type="button" class="primary" disabled aria-haspopup="true" aria-expanded="false" title="Download the image as PNG or JPG"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg> Download &#9662;</button>
     </div>
   </section>
 </header>
@@ -750,9 +781,26 @@ footer .footer-portfolio a {
   <input id="fileInsert" type="file" accept="image/*" hidden>
   <div id="stage" class="hide">
     <canvas id="cv"></canvas>
-    <input type="text" id="textInput" autocomplete="off" spellcheck="false" aria-label="Text">
+    <textarea id="textInput" rows="1" wrap="off" autocomplete="off" spellcheck="false" aria-label="Text"></textarea>
   </div>
 </main>
+
+<div id="imagePop" class="popover hide" role="menu" aria-label="Image">
+  <div class="menu-list">
+      <button id="blankimg" title="Start with a blank white canvas">Blank image</button>
+      <button id="newimg" class="hide" title="Open a picture from your computer (replaces the current image)">Import image</button>
+      <button id="insertimg" class="hide" title="Add another image on top (you can also drop or paste one)">Insert image</button>
+      <button id="canvasbtn" class="hide" title="Change the size of the canvas: add or crop area around the picture (like Canvas Size in GIMP)">Canvas size</button>
+      <button id="copy" class="hide">Copy</button>
+  </div>
+</div>
+
+<div id="downloadPop" class="popover hide" role="menu" aria-label="Download">
+  <div class="menu-list">
+    <button id="save" disabled>PNG (keeps transparency)</button>
+    <button id="saveJpg" disabled>JPG (smaller file)</button>
+  </div>
+</div>
 
 <dialog id="dlg">
   <p id="dlgText"></p>
@@ -789,6 +837,30 @@ footer .footer-portfolio a {
   </div>
 </dialog>
 
+<dialog id="canvasDlg">
+  <p>Canvas size</p>
+  <p class="hint" id="cvCur"></p>
+  <div class="blank-fields">
+    <label>Width (px) <input id="cvW" type="number" min="16" max="8000"></label>
+    <label>Height (px) <input id="cvH" type="number" min="16" max="8000"></label>
+  </div>
+  <div class="blank-fields">
+    <div class="anchor-box">Place the picture<div class="anchor-grid" id="anchorGrid"></div></div>
+    <label>New area
+      <select id="cvFillMode">
+        <option value="color">Colour</option>
+        <option value="transparent">Transparent</option>
+      </select>
+      <input id="cvFillColor" type="color" value="#ffffff">
+    </label>
+  </div>
+  <p class="cv-msg" id="cvMsg" role="alert"></p>
+  <div class="row">
+    <button id="cvNo">Cancel</button>
+    <button id="cvYes" class="primary">Apply</button>
+  </div>
+</dialog>
+
 <!-- Info Dialog Modal -->
 <dialog id="infoDlg" class="info-dialog">
   <div class="info-header">
@@ -811,7 +883,9 @@ footer .footer-portfolio a {
         <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads.</li>
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular shapes. Use the Shape option to choose outline or filled.</li>
         <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size setting sets the block size.</li>
-        <li><strong>Text:</strong> Click the image and type. Drag the text to move it and drag a corner handle to resize it, then click anywhere outside it (or press Enter) to place it. Esc cancels.</li>
+        <li><strong>Text:</strong> Click the image and type. Press Enter for a new line. Use Size to make the text larger or smaller. Drag the handles on the left and right side to change the width of the text box (the text wraps to fit) and the handles on the top and bottom to stretch the text taller or flatter. The corner handles do both, so the box can be any rectangle or square. Drag the text to move it, then click anywhere outside it (or press Ctrl+Enter) to place it. Esc cancels.</li>
+        <li><strong>Download:</strong> The Download button next to the Image menu saves the image as PNG or JPG.</li>
+        <li><strong>Canvas size:</strong> In the Image menu. Like Canvas Size in GIMP. Set a new width and height, choose where the current picture sits (the 3&times;3 grid) and what colour the new area gets. A smaller size crops. Undo takes it back.</li>
         <li><strong>Zoom:</strong> Use the Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / &minus; / 0 keys. Pan by scrolling, holding Space and dragging, or middle-mouse dragging. On touch screens use two fingers to pan and pinch.</li>
         <li><strong>Blank image:</strong> Start from a blank canvas of any size with a colour (white by default) or transparent background, then draw, insert images and add text on it.</li>
         <li><strong>Transparent colour:</strong> The checkerboard swatch erases to transparency with any tool. Download PNG to keep it (JPG fills transparent areas with white).</li>
@@ -904,7 +978,7 @@ footer .footer-portfolio a {
       zoom = null; applyZoom();
       rebuildBase();
       cancelTextEditor(); // clears text UI and paints clean base
-      $('empty').classList.add('hide'); $('stage').classList.remove('hide'); $('newimg').classList.remove('hide'); $('insertimg').classList.remove('hide');
+      $('empty').classList.add('hide'); $('stage').classList.remove('hide'); $('newimg').classList.remove('hide'); $('insertimg').classList.remove('hide'); $('canvasbtn').classList.remove('hide');
       updateZoomUI();
       redrawNow();
       URL.revokeObjectURL(url);
@@ -912,7 +986,7 @@ footer .footer-portfolio a {
     im.src = url;
   }
   $('file').onchange = e => { load(e.target.files[0]); e.target.value = ''; };
-  $('newimg').onclick = () => { if (ops.length || ov) ask('Open a new image? Your annotations will be lost.', 'Open new', openPicker); else openPicker(); };
+  $('newimg').onclick = () => { if (ops.length || ov) ask('Import another image? Your annotations will be lost.', 'Import', openPicker); else openPicker(); };
   // With an image already open, pasted / dropped images are inserted as a floating overlay
   const addImage = f => { if (!f) return; if (img) startOverlay(f); else load(f); };
   addEventListener('paste', e => {
@@ -966,9 +1040,9 @@ footer .footer-portfolio a {
   // Drawing helpers — exact censor algorithm (samples + fills on the same ctx)
   function censor(targetCtx, rx, ry, rw, rh, size) {
     const x = Math.max(0, Math.floor(rx)), y = Math.max(0, Math.floor(ry));
-    const w = Math.min(cv.width - x, Math.ceil(rw)), h = Math.min(cv.height - y, Math.ceil(rh));
+    const w = Math.min(targetCtx.canvas.width - x, Math.ceil(rw)), h = Math.min(targetCtx.canvas.height - y, Math.ceil(rh));
     if (w < 2 || h < 2) return;
-    const blk = Math.max(6 * Math.max(1, cv.width / 1000), size * 2);
+    const blk = Math.max(6 * imgScale(), size * 2);
     const d = targetCtx.getImageData(x, y, w, h).data;
     for (let by = 0; by < h; by += blk) {
       for (let bx = 0; bx < w; bx += blk) {
@@ -987,23 +1061,50 @@ footer .footer-portfolio a {
     }
   }
 
+  // Text: font px per Size unit, line height factor, multi-line layout
+  const TEXT_UNIT = 6, TEXT_LINE = 1.25, TEXT_MIN = 1, TEXT_MAX = 600;
+  const textPx = size => Math.max(6, size * TEXT_UNIT);
+  const textFont = fs => `bold ${fs}px Arial, Helvetica, sans-serif`;
+
+  // Lay text out for a wrap width bw (null = no wrapping). Every visual line remembers where it starts in the
+  // text, so the caret and the selection can be mapped onto wrapped lines.
+  function layoutText(text, size, bw) {
+    const fs = textPx(size);
+    ctx.font = textFont(fs);
+    const mw = str => ctx.measureText(str).width;
+    const lines = [];
+    let base = 0;
+    for (const ln of (text || '').split('\n')) {
+      if (!bw) lines.push({ t: ln, start: base });
+      else {
+        let cur = '', curStart = base;
+        const flush = () => { lines.push({ t: cur, start: curStart }); curStart += cur.length; cur = ''; };
+        for (const tok of ln.match(/\S+\s*|\s+/g) || ['']) {
+          if (cur && mw((cur + tok).trimEnd()) > bw) flush();
+          if (!cur && mw(tok.trimEnd()) > bw) {   // a single word wider than the box is broken up
+            for (const ch of tok) { if (cur && mw(cur + ch) > bw) flush(); cur += ch; }
+          } else cur += tok;
+        }
+        flush();
+      }
+      base += ln.length + 1;
+    }
+    let w = 0;
+    for (const l of lines) w = Math.max(w, mw(l.t.trimEnd()));
+    return { fs, lines, w, h: (lines.length - 1) * fs * TEXT_LINE + fs * 1.3 };
+  }
+
   function drawTextOn(c, o) {
-    const fontSize = Math.max(12, o.size * 4.5);
-    c.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
-    c.textBaseline = 'top';
+    const m = layoutText(o.text, o.size, o.bw);
     c.save();
     if (o.color === 'transparent') { c.globalCompositeOperation = 'destination-out'; c.fillStyle = '#000000'; }
     else c.fillStyle = o.color;
-    c.fillText(o.text || '', o.a[0], o.a[1]);
+    c.textBaseline = 'top';
+    c.font = textFont(m.fs);
+    c.translate(o.a[0], o.a[1]);
+    c.scale(1, o.sy || 1);
+    m.lines.forEach((l, i) => c.fillText(l.t, 0, i * m.fs * TEXT_LINE));
     c.restore();
-  }
-
-  function getTextBounds(o) {
-    const fontSize = Math.max(12, o.size * 4.5);
-    ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
-    const w = ctx.measureText(o.text || ' ').width || 20;
-    const h = fontSize * 1.3;
-    return { x: o.a[0], y: o.a[1], w, h };
   }
 
   function drawOpOn(c, o) {
@@ -1069,18 +1170,31 @@ footer .footer-portfolio a {
     c.restore();
   }
 
-  // Rebuild the committed layer (image + finished ops). Call only when ops change.
+  // Rebuild the committed layer (image + finished ops, including canvas-size steps). Call only when ops change.
+  const stepCv = document.createElement('canvas'); // scratch for canvas-size steps
   function rebuildBase() {
     if (!img) return;
-    baseCtx.clearRect(0, 0, baseCv.width, baseCv.height);
+    baseCv.width = img.naturalWidth; baseCv.height = img.naturalHeight; // resizing also clears
     baseCtx.drawImage(img, 0, 0);
-    for (let i = 0; i < ops.length; i++) {
-      drawOpOn(baseCtx, ops[i]);
+    for (const o of ops) {
+      if (o.tool === 'canvas') {
+        // New canvas size: the current picture is placed at (ox, oy), new area gets the fill (null = transparent), overflow is cropped
+        stepCv.width = o.cw; stepCv.height = o.ch;
+        const g = stepCv.getContext('2d');
+        if (o.fill) { g.fillStyle = o.fill; g.fillRect(0, 0, o.cw, o.ch); }
+        g.drawImage(baseCv, o.ox, o.oy);
+        baseCv.width = o.cw; baseCv.height = o.ch;
+        baseCtx.drawImage(stepCv, 0, 0);
+      } else drawOpOn(baseCtx, o);
     }
   }
 
   function redrawImmediate() {
     if (!img) return;
+    if (cv.width !== baseCv.width || cv.height !== baseCv.height) { // follows the committed canvas size (e.g. after Canvas size / Undo)
+      cv.width = baseCv.width; cv.height = baseCv.height;
+      if (zoom != null) applyZoom();
+    }
     ctx.clearRect(0, 0, cv.width, cv.height);
     ctx.drawImage(baseCv, 0, 0);
 
@@ -1110,7 +1224,9 @@ footer .footer-portfolio a {
         color: curColor(),
         size: textSize,
         a: textCanvasPos,
-        text: textInput.value || ''
+        text: textInput.value || '',
+        bw: curWrap(),
+        sy: textSY
       });
       drawTextBox(ctx);
     }
@@ -1120,6 +1236,7 @@ footer .footer-portfolio a {
     $('clear').disabled = !has;
     $('save').disabled = false;
     $('saveJpg').disabled = false;
+    $('downloadBtn').disabled = false;
   }
 
   // Coalesce multiple pointer events into one paint per frame
@@ -1140,25 +1257,33 @@ footer .footer-portfolio a {
   let textCanvasPos = null;
   const textActive = () => !!textCanvasPos;
   let caretOn = true, caretTimer = 0;
-  let textSize = 8, textRel = 0, textResize = null; // in-progress text size, last-used size (relative to image width), corner-resize drag state
+  let textSize = 6, textResize = null; // in-progress text size (Size x image scale), corner-resize drag state
+  let textBoxW = null;                    // wrap width of the text being edited (null = wrap at the image edge)
+  let textSY = 1;                         // vertical stretch of the text being edited (1 = normal)
   let draggingOnCanvas = false;
   let canvasDragOffsetX = 0, canvasDragOffsetY = 0;
 
-  function scaled() {
-    return lastGoodSize * Math.max(1, cv.width / 1000);
+  // Image-size dependent scale for everything driven by the Size control (pen width, font size, censor blocks)
+  function imgScale() { return img ? Math.max(1, img.naturalWidth / 1000) : 1; }
+  function scaled() { return lastGoodSize * imgScale(); }
+  function refocusText() { if (textActive()) textInput.focus({ preventScroll: true }); }
+
+  // Wrap width: the width you dragged the box to, otherwise the text wraps at the right edge of the image
+  function curWrap() {
+    if (textBoxW) return textBoxW;
+    const fs = textPx(textSize);
+    return Math.max(fs * 6, baseCv.width - textCanvasPos[0] - fs * 0.3);
   }
 
-  // Box around the in-progress text: used for drawing, corner handles and hit-testing
-  const TEXT_MIN = 2.7, TEXT_MAX = 600;
+  // Box around the in-progress text: used for drawing, handles and hit-testing
   function textBox() {
-    const fs = Math.max(12, textSize * 4.5);
-    const b = getTextBounds({ size: textSize, a: textCanvasPos, text: textInput.value || ' ' });
-    return { x: b.x, y: b.y, w: Math.max(b.w, fs * 4), h: b.h, fs };
+    const m = layoutText(textInput.value, textSize, curWrap());
+    return { x: textCanvasPos[0], y: textCanvasPos[1], w: textBoxW || Math.max(m.w, m.fs * 4), h: m.h * textSY, fs: m.fs, lines: m.lines };
   }
   const textCorners = () => {
     const t = textBox(), pad = 5 * pxScale();
-    const x1 = t.x - pad, y1 = t.y - pad, x2 = t.x + t.w + pad, y2 = t.y + t.h + pad;
-    return [['nw', x1, y1], ['ne', x2, y1], ['sw', x1, y2], ['se', x2, y2]];
+    const x1 = t.x - pad, y1 = t.y - pad, x2 = t.x + t.w + pad, y2 = t.y + t.h + pad, mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    return [['nw', x1, y1], ['ne', x2, y1], ['sw', x1, y2], ['se', x2, y2], ['w', x1, my], ['e', x2, my], ['n', mx, y1], ['s', mx, y2]];
   };
   function textHandleHit(p) {
     let best = null, bd = 16 * pxScale();
@@ -1169,9 +1294,9 @@ footer .footer-portfolio a {
     return best;
   }
 
-  // Dashed box, corner handles and blinking caret so the in-progress text is easy to see and grab
+  // Dashed box, selection, handles and blinking caret so the in-progress text is easy to see and grab
   function drawTextBox(c) {
-    const t = textBox(), k = pxScale(), pad = 5 * k, hs = 10 * k;
+    const t = textBox(), k = pxScale(), pad = 5 * k, hs = 10 * k, lh = t.fs * TEXT_LINE * textSY;
     const bx = t.x - pad, by = t.y - pad, bw = t.w + pad * 2, bh = t.h + pad * 2;
     c.save();
     c.lineWidth = 2 * k;
@@ -1180,14 +1305,32 @@ footer .footer-portfolio a {
     c.strokeStyle = '#000000'; c.setLineDash([6 * k, 6 * k]);
     c.strokeRect(bx, by, bw, bh);
     c.setLineDash([]);
+    c.font = textFont(t.fs);
+    const s = textInput.selectionStart, e = textInput.selectionEnd;
+    if (s !== e) { // selection highlight, visual line by visual line
+      c.fillStyle = 'rgba(52, 152, 219, 0.35)';
+      t.lines.forEach((l, i) => {
+        const ls = l.start, le = ls + l.t.length, next = t.lines[i + 1];
+        const nl = !!next && next.start > le && s <= le && e > le;   // selection includes the line break
+        const a = Math.min(Math.max(s, ls), le), b = Math.max(a, Math.min(e, le));
+        if (a < b || nl) {
+          const x0 = c.measureText(l.t.slice(0, a - ls)).width;
+          const x1 = c.measureText(l.t.slice(0, b - ls)).width + (nl ? t.fs * 0.3 : 0);
+          c.fillRect(t.x + x0, t.y + i * lh, x1 - x0, lh);
+        }
+      });
+    }
     if (caretOn) {
-      c.font = `bold ${t.fs}px Arial, Helvetica, sans-serif`;
-      const cx = t.x + (textInput.value ? c.measureText(textInput.value).width : 0) + 1 * k;
+      const caret = textInput.selectionDirection === 'backward' ? s : e;
+      let li = 0;
+      t.lines.forEach((l, i) => { if (l.start <= caret) li = i; });
+      const l = t.lines[li];
+      const cx = t.x + c.measureText(l.t.slice(0, caret - l.start)).width + 1 * k, cy = t.y + li * lh;
       c.lineCap = 'butt';
       c.strokeStyle = '#000000'; c.lineWidth = 3.5 * k;
-      c.beginPath(); c.moveTo(cx, t.y); c.lineTo(cx, t.y + t.fs * 1.15); c.stroke();
+      c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx, cy + t.fs * 1.15 * textSY); c.stroke();
       c.strokeStyle = '#ffffff'; c.lineWidth = 1.5 * k;
-      c.beginPath(); c.moveTo(cx, t.y); c.lineTo(cx, t.y + t.fs * 1.15); c.stroke();
+      c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx, cy + t.fs * 1.15 * textSY); c.stroke();
     }
     c.lineWidth = 1.5 * k; c.fillStyle = '#ffffff'; c.strokeStyle = '#000000';
     for (const [, cx, cy] of textCorners()) {
@@ -1200,34 +1343,41 @@ footer .footer-portfolio a {
   function startTextResize(mode) {
     const t = textBox();
     textResize = {
-      mode, w0: t.w, h0: t.h, s0: textSize,
-      ax: mode.includes('w') ? t.x + t.w : t.x,   // opposite corner stays put
+      mode,
+      ax: mode.includes('w') ? t.x + t.w : t.x,   // the opposite edges stay put
       ay: mode.includes('n') ? t.y + t.h : t.y
     };
   }
 
+  // Every handle reshapes the text box: left / right change its width (the text wraps to fit),
+  // top / bottom stretch the text taller or flatter, corners do both. Size sets the font size.
   function updateTextResize(p) {
-    const r = textResize, m = r.mode;
-    const wx = m.includes('e') ? p[0] - r.ax : r.ax - p[0];
-    const hy = m.includes('s') ? p[1] - r.ay : r.ay - p[1];
-    const ratio = (wx * r.w0 + hy * r.h0) / (r.w0 * r.w0 + r.h0 * r.h0); // projection onto the box diagonal
-    textSize = Math.max(TEXT_MIN, Math.min(TEXT_MAX, r.s0 * ratio));
-    textRel = textSize / cv.width;
-    const t = textBox();
-    textCanvasPos[0] = m.includes('e') ? r.ax : r.ax - t.w;
-    textCanvasPos[1] = m.includes('s') ? r.ay : r.ay - t.h;
+    const r = textResize, m = r.mode, pad = 5 * pxScale();
+    if (m.includes('e') || m.includes('w')) {
+      const newW = m.includes('e') ? p[0] - pad - r.ax : r.ax - p[0] - pad;
+      textBoxW = Math.max(textPx(textSize) * 1.5, newW);
+      textCanvasPos[0] = m.includes('e') ? r.ax : r.ax - textBoxW;
+    }
+    if (m.includes('n') || m.includes('s')) {
+      const nat = layoutText(textInput.value, textSize, curWrap()).h;   // unstretched height at the new width
+      const newH = m.includes('s') ? p[1] - pad - r.ay : r.ay - p[1] - pad;
+      textSY = Math.max(0.2, Math.min(10, newH / nat));
+      textCanvasPos[1] = m.includes('s') ? r.ay : r.ay - nat * textSY;
+    }
     redraw();
   }
 
   function openTextEditor(canvasX, canvasY) {
     textCanvasPos = [canvasX, canvasY];
-    textSize = textRel ? textRel * cv.width : 8 * Math.max(1, cv.width / 1000);
+    textSize = scaled();
+    textBoxW = null;
+    textSY = 1;
     textInput.value = '';
     caretOn = true;
     clearInterval(caretTimer);
     caretTimer = setInterval(() => { caretOn = !caretOn; redraw(); }, 530);
     redraw();
-    setTimeout(() => textInput.focus(), 10);
+    setTimeout(refocusText, 10);
   }
 
   function cancelTextEditor() {
@@ -1235,30 +1385,50 @@ footer .footer-portfolio a {
     textCanvasPos = null;
     draggingOnCanvas = false;
     textResize = null;
+    textInput.blur();
     redraw();
   }
 
   function placeText() {
-    const text = textInput.value.trim();
-    if (!text || !textCanvasPos) {
-      cancelTextEditor();
-      return;
-    }
-    ops.push({
-      tool: 'text',
-      color: curColor(),
-      size: textSize,
-      a: [textCanvasPos[0], textCanvasPos[1]],
-      text: text
-    });
+    if (!textCanvasPos) return;
+    const text = textInput.value.replace(/\s+$/, '');
+    if (!text.trim()) { cancelTextEditor(); return; }
+    ops.push({ tool: 'text', color: curColor(), size: textSize, a: [textCanvasPos[0], textCanvasPos[1]], text, bw: curWrap(), sy: textSY });
     rebuildBase();
     cancelTextEditor();
   }
 
-  textInput.addEventListener('input', () => { caretOn = true; redraw(); });
+  const syncCaret = () => { if (textActive()) { caretOn = true; redraw(); } };
+  textInput.addEventListener('input', syncCaret);
+  textInput.addEventListener('keyup', syncCaret);
+  document.addEventListener('selectionchange', () => { if (document.activeElement === textInput) syncCaret(); });
   textInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); placeText(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); placeText(); } // plain Enter = new line
     else if (e.key === 'Escape') { e.preventDefault(); cancelTextEditor(); }
+    else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Up / Down move between the wrapped (visual) lines, not just the lines you typed
+      e.preventDefault();
+      const m = layoutText(textInput.value, textSize, curWrap());   // leaves the text font set on ctx
+      const back = textInput.selectionDirection === 'backward';
+      const st = textInput.selectionStart, en = textInput.selectionEnd, caret = back ? st : en, anchor = back ? en : st;
+      let li = 0;
+      m.lines.forEach((l, i) => { if (l.start <= caret) li = i; });
+      const ti = li + (e.key === 'ArrowUp' ? -1 : 1);
+      let idx;
+      if (ti < 0) idx = 0;
+      else if (ti >= m.lines.length) idx = textInput.value.length;
+      else {
+        const l = m.lines[li], tl = m.lines[ti], nx = m.lines[ti + 1];
+        const x = ctx.measureText(l.t.slice(0, caret - l.start)).width;
+        let col = 0;
+        while (col < tl.t.length && ctx.measureText(tl.t.slice(0, col + 1)).width <= x) col++;
+        if (nx && nx.start === tl.start + tl.t.length && col >= tl.t.length) col = Math.max(0, tl.t.length - 1); // stay on this line
+        idx = tl.start + col;
+      }
+      if (e.shiftKey) textInput.setSelectionRange(Math.min(anchor, idx), Math.max(anchor, idx), idx < anchor ? 'backward' : 'forward');
+      else textInput.setSelectionRange(idx, idx);
+      syncCaret();
+    }
   });
 
   function hitTestText(p) {
@@ -1286,10 +1456,18 @@ footer .footer-portfolio a {
     if (from !== 'box') sizeBox.value = v;
     if (from !== 'slider') sizeSlider.value = sliderFromSize(v);
     sizeBox.classList.remove('invalid');
+    if (textActive()) { textSize = scaled(); redraw(); } // Size also sets the font size of the text being edited
+  }
+  // Reflect the size of the in-progress text (e.g. after dragging a corner handle) in the Size control
+  function syncSizeUI() {
+    const v = roundSize(clampSize(textSize / imgScale()));
+    lastGoodSize = v; sizeBox.value = v; sizeSlider.value = sliderFromSize(v);
+    sizeBox.classList.remove('invalid');
   }
   sizeSlider.addEventListener('input', () => setSize(sizeFromSlider(+sizeSlider.value), 'slider'));
-  $('sizeDown').onclick = () => setSize(lastGoodSize - 1);
-  $('sizeUp').onclick = () => setSize(lastGoodSize + 1);
+  sizeSlider.addEventListener('change', refocusText);
+  $('sizeDown').onclick = () => { setSize(lastGoodSize - 1); refocusText(); };
+  $('sizeUp').onclick = () => { setSize(lastGoodSize + 1); refocusText(); };
 
   // While typing: apply valid whole numbers immediately, flag decimals and anything out of range
   sizeBox.addEventListener('input', () => {
@@ -1306,8 +1484,8 @@ footer .footer-portfolio a {
   sizeBox.addEventListener('blur', commitSizeBox);
   sizeBox.addEventListener('keydown', e => {
     e.stopPropagation(); // keep Enter / Esc / Ctrl+Z here instead of triggering overlay or undo shortcuts
-    if (e.key === 'Enter') { e.preventDefault(); commitSizeBox(); sizeBox.blur(); }
-    else if (e.key === 'Escape') { e.preventDefault(); sizeBox.value = lastGoodSize; sizeBox.classList.remove('invalid'); sizeBox.blur(); }
+    if (e.key === 'Enter') { e.preventDefault(); commitSizeBox(); sizeBox.blur(); refocusText(); }
+    else if (e.key === 'Escape') { e.preventDefault(); sizeBox.value = lastGoodSize; sizeBox.classList.remove('invalid'); sizeBox.blur(); refocusText(); }
   });
   setSize(SIZE_DEFAULT);
 
@@ -1344,6 +1522,7 @@ footer .footer-portfolio a {
         $('color').value = palette[i];
         renderSwatches();
         if (textActive()) redraw();
+        refocusText();
       };
       box.appendChild(b);
     });
@@ -1359,6 +1538,7 @@ footer .footer-portfolio a {
       if (eyedropActive) setEyedrop(false);
       renderSwatches();
       if (textActive()) redraw();
+      refocusText();
     };
     box.appendChild(t);
     // Edit / eyedropper only apply to normal swatches
@@ -1492,10 +1672,87 @@ footer .footer-portfolio a {
   }
 
   addEventListener('keydown', e => {
-    if (!ov || $('dlg').open || infoDlg.open || blankDlg.open) return;
+    if (!ov || $('dlg').open || infoDlg.open || blankDlg.open || canvasDlg.open) return;
     if (e.key === 'Enter') { e.preventDefault(); placeOverlay(); }
     else if (e.key === 'Escape') { e.preventDefault(); cancelOverlay(); }
   });
+
+  // ---- Sub menus (popovers): Image and Download ----
+  const popovers = [];
+  function makePopover(btn, pop) {
+    const isOpen = () => !pop.classList.contains('hide');
+    const close = () => { pop.classList.add('hide'); btn.setAttribute('aria-expanded', 'false'); };
+    popovers.push(close);
+    btn.onclick = () => {
+      if (isOpen()) { close(); return; }
+      popovers.forEach(f => f());
+      pop.classList.remove('hide');
+      const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+      let top = r.bottom + 6;
+      if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+      pop.style.left = Math.min(Math.max(8, r.left), Math.max(8, innerWidth - w - 8)) + 'px';
+      pop.style.top = top + 'px';
+      btn.setAttribute('aria-expanded', 'true');
+    };
+    pop.addEventListener('click', e => { if (e.target.closest('button')) close(); }); // after the button's own action
+    document.addEventListener('pointerdown', e => { if (isOpen() && !pop.contains(e.target) && !btn.contains(e.target)) close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) close(); });
+  }
+  makePopover($('imageBtn'), $('imagePop'));
+  makePopover($('downloadBtn'), $('downloadPop'));
+  addEventListener('resize', () => popovers.forEach(f => f()));
+
+  // ---- Canvas size (like GIMP): add or crop area around the picture, choose where the current picture sits ----
+  const canvasDlg = $('canvasDlg'), CV_MAX_SIDE = 8000, CV_MAX_AREA = 50e6;
+  let anchor = [1, 1];
+  const anchorGrid = $('anchorGrid');
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.ax = c; b.dataset.ay = r;
+    b.title = ['Top', 'Middle', 'Bottom'][r] + ' ' + ['left', 'centre', 'right'][c];
+    b.setAttribute('aria-label', 'Place the picture ' + b.title.toLowerCase());
+    anchorGrid.appendChild(b);
+  }
+  function syncAnchor() {
+    anchorGrid.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.ax === anchor[0] && +b.dataset.ay === anchor[1]));
+  }
+  anchorGrid.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    anchor = [+b.dataset.ax, +b.dataset.ay];
+    syncAnchor();
+  });
+  $('cvFillMode').onchange = () => { $('cvFillColor').disabled = $('cvFillMode').value !== 'color'; };
+
+  function openCanvasDlg() {
+    if (!img) return;
+    placeText(); placeOverlay();      // lock in anything still floating first
+    $('cvW').value = baseCv.width; $('cvH').value = baseCv.height;
+    $('cvCur').textContent = 'Current size: ' + baseCv.width + ' × ' + baseCv.height + ' px';
+    $('cvMsg').textContent = '';
+    syncAnchor();
+    canvasDlg.showModal();
+  }
+  function applyCanvasSize() {
+    const cw = baseCv.width, ch = baseCv.height;
+    const nw = Math.round(+$('cvW').value), nh = Math.round(+$('cvH').value);
+    if (!(nw >= 16 && nh >= 16 && nw <= Math.max(CV_MAX_SIDE, cw) && nh <= Math.max(CV_MAX_SIDE, ch))) {
+      $('cvMsg').textContent = 'Width and height must be between 16 and ' + CV_MAX_SIDE + ' px.'; return;
+    }
+    if (nw * nh > Math.max(CV_MAX_AREA, cw * ch)) { $('cvMsg').textContent = 'That is too large (max about 50 megapixels).'; return; }
+    canvasDlg.close();
+    if (nw === cw && nh === ch) return;
+    ops.push({
+      tool: 'canvas', cw: nw, ch: nh,
+      ox: Math.round(anchor[0] * (nw - cw) / 2), oy: Math.round(anchor[1] * (nh - ch) / 2),
+      fill: $('cvFillMode').value === 'color' ? $('cvFillColor').value : null
+    });
+    rebuildBase();
+    redrawNow();
+  }
+  $('canvasbtn').onclick = openCanvasDlg;
+  $('cvNo').onclick = () => canvasDlg.close();
+  $('cvYes').onclick = applyCanvasSize;
+  canvasDlg.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); applyCanvasSize(); } });
 
   // ---- Zoom & pan ----
   let zoom = null;                       // null = fit to window, otherwise displayed scale (1 = 100%)
@@ -1613,7 +1870,7 @@ footer .footer-portfolio a {
 
   // Keyboard: + / - / 0 for zoom, hold Space to pan (ignored while typing or in dialogs)
   const viewKeysOk = e => img && !e.ctrlKey && !e.metaKey && !e.altKey && !textActive() &&
-    !$('dlg').open && !infoDlg.open && !blankDlg.open &&
+    !$('dlg').open && !infoDlg.open && !blankDlg.open && !canvasDlg.open &&
     (e.target === document.body || e.target === cv);
   addEventListener('keydown', e => {
     if (!viewKeysOk(e)) return;
@@ -1685,8 +1942,8 @@ footer .footer-portfolio a {
 
     // Eyedropper: sample the pixel under the cursor into the selected swatch
     if (eyedropActive) {
-      const x = Math.max(0, Math.min(cv.width - 1, Math.floor(p[0])));
-      const y = Math.max(0, Math.min(cv.height - 1, Math.floor(p[1])));
+      const x = Math.max(0, Math.min(baseCv.width - 1, Math.floor(p[0])));
+      const y = Math.max(0, Math.min(baseCv.height - 1, Math.floor(p[1])));
       const d = baseCtx.getImageData(x, y, 1, 1).data;
       const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
       palette[sel] = hex;
@@ -1714,8 +1971,8 @@ footer .footer-portfolio a {
       const p = pos(e);
       textCanvasPos[0] = p[0] - canvasDragOffsetX;
       textCanvasPos[1] = p[1] - canvasDragOffsetY;
-      textCanvasPos[0] = Math.max(0, Math.min(cv.width - 10, textCanvasPos[0]));
-      textCanvasPos[1] = Math.max(0, Math.min(cv.height - 10, textCanvasPos[1]));
+      textCanvasPos[0] = Math.max(0, Math.min(baseCv.width - 10, textCanvasPos[0]));
+      textCanvasPos[1] = Math.max(0, Math.min(baseCv.height - 10, textCanvasPos[1]));
       redraw();
       return;
     }
@@ -1748,13 +2005,15 @@ footer .footer-portfolio a {
     if (textResize) {
       textResize = null;
       cv.style.cursor = 'crosshair';
-      textInput.focus();
+      refocusText();
+      redraw(); // the canvas may need to grow now that the drag is over
       return;
     }
     if (draggingOnCanvas) {
       draggingOnCanvas = false;
       cv.style.cursor = 'crosshair';
-      textInput.focus();
+      refocusText();
+      redraw(); // the canvas may need to grow now that the drag is over
       return;
     }
     if (!cur) return;
@@ -1806,7 +2065,7 @@ footer .footer-portfolio a {
   $('undo').onclick = undo;
   $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelOverlay(); cancelTextEditor(); rebuildBase(); redrawNow(); });
   addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !$('dlg').open && !infoDlg.open && !blankDlg.open) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.target !== textInput && !$('dlg').open && !infoDlg.open && !blankDlg.open && !canvasDlg.open) {
       e.preventDefault(); undo();
     }
   });
