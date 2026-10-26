@@ -60,6 +60,7 @@ Web Image Editor by Mattias/
 - **No external dependencies** - pure vanilla HTML, CSS, and JavaScript.
 - **Client-side only** - No data is transmitted to any server. Images and annotations exist only in the browser.
 - **Canvas-based** - Annotations are drawn on an HTML5 canvas over the original image.
+- **Separate UI layer** - The text box, its handles, the caret, the censor selection and the insert-image frame are drawn on a second transparent canvas laid over the picture, so they never end up in Copy, Download or the browser's right-click *Copy image*.
 - **Canvas size** - Stored as a step in the annotation list, so annotations drawn before it keep their place and Undo restores the old size. Limited to 8000 px per side.
 - **Text wrapping** - Text is laid out line by line for the chosen box width and then stretched vertically by the box height; the caret and the selection are mapped onto the wrapped lines.
 - **Pointer events** - Supports mouse, touch, and pen input.

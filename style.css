@@ -394,12 +394,29 @@ main {
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     touch-action: none;
-    flex: 0 0 auto;
-    margin: 0 auto;
     background-color: #ffffff;
     background-image: conic-gradient(#cccccc 25%, #ffffff 0 50%, #cccccc 0 75%, #ffffff 0);
     background-size: 16px 16px;
 }
+
+/* The canvas sits in a wrapper so a second, transparent canvas (UI only: text box, handles, selection frames)
+   can be laid exactly over it. That canvas is never exported or copied, and the browser's own
+   right-click "Copy image" only sees the picture. */
+#cvWrap {
+    position: relative;
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin: 0 auto;
+}
+#uiCv {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+#stage.zoomed #cvWrap { max-width: none; }
 
 #textInput {
     position: absolute;
