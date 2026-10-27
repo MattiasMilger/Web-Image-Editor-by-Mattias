@@ -897,7 +897,7 @@ footer .footer-portfolio a {
     <div class="info-card">
       <ul>
         <li><strong>Paint:</strong> Freehand drawing tool with custom sizing and color swatches.</li>
-        <li><strong>Arrow & Line:</strong> Draw straight indicator lines or crisp open arrowheads.</li>
+        <li><strong>Arrow & Line:</strong> Draw straight indicator lines or clean open-headed arrows. Arrows end exactly where you release and stay inside the image, so they never clip.</li>
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular shapes. Use the Shape option to choose outline or filled.</li>
         <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size setting sets the block size.</li>
         <li><strong>Text:</strong> Click the image and type. Press Enter for a new line. Use Size to make the text larger or smaller. Drag the handles on the left and right side to change the width of the text box (the text wraps to fit) and the handles on the top and bottom to stretch the text taller or flatter. The corner handles do both, so the box can be any rectangle or square. Drag the text to move it, then click anywhere outside it (or press Ctrl+Enter) to place it. Esc cancels.</li>
@@ -1141,16 +1141,41 @@ footer .footer-portfolio a {
     const rx = Math.min(x1, x2), ry = Math.min(y1, y2), rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
     switch (o.tool) {
       case 'arrow': {
-        const ang = Math.atan2(y2 - y1, x2 - x1);
-        const head = Math.max(Math.min(14, o.size * 7), o.size * 4); // same as before for size >= 2, smaller heads for thinner arrows
+        // Open V head with a sharp, mitered tip. Everything stays inside the segment start -> tip: the round start cap is
+        // pulled in by half the line width, and the V's vertex is pulled back by the miter length, so the sharp point
+        // ends exactly at the end point and nothing sticks out past either end and gets clipped.
+        const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+        if (len < 0.01) break;
+        const s = o.size, ux = dx / len, uy = dy / len;
+        const ang = Math.atan2(dy, dx), spread = Math.PI / 8;       // half the head angle (22.5 deg): narrow = pointy
+        const miter = (s / 2) / Math.sin(spread);                   // how far a mitered tip reaches beyond the vertex
+        const tx = x2 - ux * miter, ty = y2 - uy * miter;           // V vertex
+        const sx = x1 + ux * s / 2, sy = y1 + uy * s / 2;           // shaft start
+        const room = Math.max(len - miter - s / 2, 0);              // space left behind the vertex
+        // Barb length grows with the line width, but is capped at a share of the arrow's length (and by what fits at
+        // all), so short arrows keep a proportionate head and a visible shaft instead of turning into a lone head.
+        const head = Math.min(s * 4 + 6, len * 0.55, room / 0.95);
+        if (room <= 0) { // too short for a shaft plus a mitered head: draw a small solid point so it never vanishes
+          const L = Math.min(len, s * 2 + 4), hw = L * 0.4;
+          c.beginPath();
+          c.moveTo(x2, y2);
+          c.lineTo(x2 - ux * L - uy * hw, y2 - uy * L + ux * hw);
+          c.lineTo(x2 - ux * L + uy * hw, y2 - uy * L - ux * hw);
+          c.closePath();
+          c.fill();
+          break;
+        }
+        if (room > 0) {
+          c.beginPath();
+          c.moveTo(sx, sy);
+          c.lineTo(tx, ty);
+          c.stroke();
+        }
+        c.lineJoin = 'miter'; c.miterLimit = 10; c.lineCap = 'butt'; // flat barb ends: no scalloped back on thick arrows
         c.beginPath();
-        c.moveTo(x1, y1);
-        c.lineTo(x2, y2);
-        c.stroke();
-        c.beginPath();
-        c.moveTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
-        c.lineTo(x2, y2);
-        c.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        c.moveTo(tx - head * Math.cos(ang - spread), ty - head * Math.sin(ang - spread));
+        c.lineTo(tx, ty);
+        c.lineTo(tx - head * Math.cos(ang + spread), ty - head * Math.sin(ang + spread));
         c.stroke();
         break;
       }
@@ -2009,6 +2034,10 @@ footer .footer-portfolio a {
 
     if (!cur) return;
     const p = pos(e);
+    if (cur.tool === 'arrow') { // keep the whole arrow inside the image so the head is never cut off at the edge
+      p[0] = Math.max(0, Math.min(baseCv.width, p[0]));
+      p[1] = Math.max(0, Math.min(baseCv.height, p[1]));
+    }
     cur.b = p;
     if (cur.tool === 'pen') {
       const last = cur.pts[cur.pts.length - 1];

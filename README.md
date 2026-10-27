@@ -13,7 +13,7 @@ Open `index.html` in a modern browser. No build tools or dependencies required.
 ## Features
 
 - **Paint** - Freehand drawing with adjustable size and colour.
-- **Arrow** - Draw clean open arrowheads to point things out.
+- **Arrow** - Draw clean open-headed arrows to point things out. The tip lands exactly where you release, and the arrow is kept inside the image, so it never clips at the edge.
 - **Line** - Free-direction lines for underlining or highlighting.
 - **Box & Circle** - Draw rectangles and circles / ellipses. The **Shape** panel switches between outline and filled.
 - **Censor** - Pixelate / block out sensitive areas with average-colour blocks. The Size setting sets the block size.
