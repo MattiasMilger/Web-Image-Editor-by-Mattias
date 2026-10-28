@@ -540,6 +540,30 @@ dialog .hint { margin: 0 0 14px 0; }
 dialog .cv-msg { margin: 0 0 12px 0; min-height: 1.2em; font-size: 0.85em; color: var(--error-color); }
 .blank-fields input:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Crop bar: floats at the bottom of the screen while a crop box is open */
+.crop-bar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background-color: var(--container-bg);
+    color: var(--fg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    max-width: calc(100vw - 16px);
+}
+.crop-info { font-size: 0.85em; font-weight: bold; white-space: nowrap; }
+@media (max-width: 768px) {
+    /* sit above the fixed bottom toolbar */
+    .crop-bar { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+}
+
 /* Zoom: when zoomed the stage scrolls inside itself instead of growing the page */
 #stage.zoomed {
     max-height: 80vh;
@@ -721,6 +745,9 @@ footer .footer-portfolio a {
       <button data-tool="text" aria-pressed="false" title="Add text" aria-label="Text">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M8 19h8"/></svg>
       </button>
+      <button data-tool="crop" aria-pressed="false" title="Crop: keep only part of the image" aria-label="Crop">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M2 6h14a2 2 0 0 1 2 2v14"/></svg>
+      </button>
     </div>
   </section>
 
@@ -819,6 +846,12 @@ footer .footer-portfolio a {
   </div>
 </div>
 
+<div id="cropBar" class="crop-bar hide" role="group" aria-label="Crop">
+  <span id="cropInfo" class="crop-info" aria-live="polite"></span>
+  <button id="cropCancel" type="button" title="Cancel (Esc)">Cancel</button>
+  <button id="cropApply" type="button" class="primary" title="Crop the image to the box (Enter)">Crop</button>
+</div>
+
 <dialog id="dlg">
   <p id="dlgText"></p>
   <div class="row">
@@ -901,6 +934,7 @@ footer .footer-portfolio a {
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular shapes. Use the Shape option to choose outline or filled.</li>
         <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size setting sets the block size.</li>
         <li><strong>Text:</strong> Click the image and type. Press Enter for a new line. Use Size to make the text larger or smaller. Drag the handles on the left and right side to change the width of the text box (the text wraps to fit) and the handles on the top and bottom to stretch the text taller or flatter. The corner handles do both, so the box can be any rectangle or square. Drag the text to move it, then click anywhere outside it (or press Ctrl+Enter) to place it. Esc cancels.</li>
+        <li><strong>Crop:</strong> Pick the Crop tool and a box appears on the image. Drag its handles to choose the part to keep, drag inside it to move it, or drag outside it to draw a new box. Everything outside the box is dimmed. Click <em>Crop</em> (or press Enter) to cut the image down to the box, or Cancel (Esc) to leave it as it is. Undo takes it back.</li>
         <li><strong>Download:</strong> The Download button next to the Image menu saves the image as PNG or JPG.</li>
         <li><strong>Canvas size:</strong> In the Image menu. Like Canvas Size in GIMP. Set a new width and height, choose where the current picture sits (the 3&times;3 grid) and what colour the new area gets. A smaller size crops. Undo takes it back.</li>
         <li><strong>Zoom:</strong> Use the Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / &minus; / 0 keys. Pan by scrolling, holding Space and dragging, or middle-mouse dragging. On touch screens use two fingers to pan and pinch.</li>
@@ -934,6 +968,7 @@ footer .footer-portfolio a {
   const baseCtx = baseCv.getContext('2d', { willReadFrequently: true });
   let img = null, ops = [], cur = null, tool = 'pen', fillShapes = false;
   let ov = null, ovDrag = null; // floating inserted image + its current drag state
+  let crop = null, cropDrag = null, toolBeforeCrop = 'pen'; // crop box {x,y,w,h} in image px, its drag state, tool to go back to
   let transparentSel = false;   // true when the transparent (erase) swatch is the active colour
   function curColor() { return transparentSel ? 'transparent' : $('color').value; }
   let rafId = 0; // requestAnimationFrame id for coalescing redraws
@@ -993,12 +1028,14 @@ footer .footer-portfolio a {
       baseCv.width = cv.width; baseCv.height = cv.height;
       ops = []; cur = null;
       ov = null; ovDrag = null;
+      closeCrop();
       zoom = null; applyZoom();
       rebuildBase();
       cancelTextEditor(); // clears text UI and paints clean base
       $('empty').classList.add('hide'); $('stage').classList.remove('hide'); $('newimg').classList.remove('hide'); $('insertimg').classList.remove('hide'); $('canvasbtn').classList.remove('hide');
       updateZoomUI();
       redrawNow();
+      if (tool === 'crop') startCrop();   // Crop tool was already selected: open the box on the new image
       URL.revokeObjectURL(url);
     };
     im.src = url;
@@ -1262,6 +1299,7 @@ footer .footer-portfolio a {
     }
 
     if (ov) drawOverlay(ctx, uiCtx);
+    if (crop) drawCrop(uiCtx);
 
     if (textCanvasPos) {
       drawTextOn(ctx, {
@@ -1276,7 +1314,7 @@ footer .footer-portfolio a {
       drawTextBox(uiCtx);
     }
 
-    const has = ops.length > 0 || !!ov || !!textCanvasPos;
+    const has = ops.length > 0 || !!ov || !!textCanvasPos || !!crop;
     $('undo').disabled = !has;
     $('clear').disabled = !has;
     $('save').disabled = false;
@@ -1724,6 +1762,146 @@ footer .footer-portfolio a {
     else if (e.key === 'Escape') { e.preventDefault(); cancelOverlay(); }
   });
 
+  // ---- Crop: choose the part to keep (drag handles / move / draw a new box), then apply ----
+  // Applying adds a 'canvas' step with a negative offset, so Undo, Clear and rebuildBase() already know how to handle it.
+  const CROP_MIN = 16;
+  const cropMin = () => Math.min(CROP_MIN, baseCv.width, baseCv.height);
+  const clampTo = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const defaultCrop = () => {
+    const W = baseCv.width, H = baseCv.height;
+    return { x: W * 0.1, y: H * 0.1, w: W * 0.8, h: H * 0.8 };   // inset a little so every handle is easy to grab
+  };
+  const cropHandles = () => {
+    const { x, y, w, h } = crop, mx = x + w / 2, my = y + h / 2;
+    return [['nw', x, y], ['ne', x + w, y], ['sw', x, y + h], ['se', x + w, y + h],
+            ['n', mx, y], ['s', mx, y + h], ['w', x, my], ['e', x + w, my]];
+  };
+  function cropHit(p) {
+    let best = null, bd = 16 * pxScale();
+    for (const [n, cx, cy] of cropHandles()) {
+      const d = Math.hypot(p[0] - cx, p[1] - cy);
+      if (d <= bd) { bd = d; best = n; }
+    }
+    if (best) return best;
+    return (p[0] >= crop.x && p[0] <= crop.x + crop.w && p[1] >= crop.y && p[1] <= crop.y + crop.h) ? 'move' : null;
+  }
+  // The box in whole pixels, kept inside the image
+  function cropRect() {
+    const x0 = Math.max(0, Math.round(crop.x)), y0 = Math.max(0, Math.round(crop.y));
+    const x1 = Math.min(baseCv.width, Math.round(crop.x + crop.w)), y1 = Math.min(baseCv.height, Math.round(crop.y + crop.h));
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
+  function drawCrop(u) {
+    const W = u.canvas.width, H = u.canvas.height, k = pxScale(), hs = 10 * k;
+    const { x, y, w, h } = crop;
+    u.save();
+    u.fillStyle = 'rgba(0, 0, 0, 0.55)';                 // dim everything outside the box
+    u.beginPath(); u.rect(0, 0, W, H); u.rect(x, y, w, h); u.fill('evenodd');
+    u.lineWidth = k; u.strokeStyle = 'rgba(255, 255, 255, 0.45)';   // rule-of-thirds guides
+    u.beginPath();
+    for (let i = 1; i < 3; i++) {
+      u.moveTo(x + w * i / 3, y); u.lineTo(x + w * i / 3, y + h);
+      u.moveTo(x, y + h * i / 3); u.lineTo(x + w, y + h * i / 3);
+    }
+    u.stroke();
+    u.lineWidth = 2 * k;
+    u.strokeStyle = '#ffffff'; u.setLineDash([]);
+    u.strokeRect(x, y, w, h);
+    u.strokeStyle = '#000000'; u.setLineDash([6 * k, 6 * k]);
+    u.strokeRect(x, y, w, h);
+    u.setLineDash([]);
+    u.lineWidth = 1.5 * k; u.fillStyle = '#ffffff'; u.strokeStyle = '#000000';
+    for (const [, cx, cy] of cropHandles()) {
+      u.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+      u.strokeRect(cx - hs / 2, cy - hs / 2, hs, hs);
+    }
+    u.restore();
+    const r = cropRect();
+    $('cropInfo').textContent = r.w + ' × ' + r.h + ' px';
+  }
+
+  function startCrop() {
+    if (!img) return;
+    placeText(); placeOverlay();          // lock in anything still floating first
+    crop = defaultCrop(); cropDrag = null;
+    $('cropBar').classList.remove('hide');
+    cv.style.cursor = 'crosshair';
+    redrawNow();
+  }
+  function closeCrop() {                  // drop the box (does not change the selected tool)
+    crop = null; cropDrag = null;
+    $('cropBar').classList.add('hide');
+  }
+  function selectTool(name) {
+    tool = name;
+    document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x.dataset.tool === name));
+    syncFillUI();
+  }
+  function cancelCrop() {                 // drop the box and go back to the tool that was active before
+    if (!crop && tool !== 'crop') return;
+    closeCrop();
+    if (tool === 'crop') selectTool(toolBeforeCrop);
+    redrawNow();
+  }
+  function applyCrop() {
+    if (!crop) return;
+    const r = cropRect();
+    if (r.w < 1 || r.h < 1) return;
+    const whole = r.x === 0 && r.y === 0 && r.w === baseCv.width && r.h === baseCv.height;
+    closeCrop();
+    selectTool(toolBeforeCrop);
+    if (!whole) {
+      ops.push({ tool: 'canvas', cw: r.w, ch: r.h, ox: -r.x, oy: -r.y, fill: null });
+      rebuildBase();
+    }
+    redrawNow();
+  }
+
+  function cropStartDrag(hit, p) {
+    if (hit === 'move') cropDrag = { mode: 'move', ox: p[0] - crop.x, oy: p[1] - crop.y };
+    else cropDrag = { mode: hit, L: crop.x, R: crop.x + crop.w, T: crop.y, B: crop.y + crop.h };  // the opposite sides stay put
+  }
+  function cropStartDraw(p) {             // drag outside the box: draw a new one from this corner
+    const x = clampTo(p[0], 0, baseCv.width), y = clampTo(p[1], 0, baseCv.height);
+    cropDrag = { mode: 'draw', ax: x, ay: y, prev: crop };
+    crop = { x, y, w: 0, h: 0 };
+  }
+  function cropUpdateDrag(p) {
+    const W = baseCv.width, H = baseCv.height, m = cropDrag.mode, min = cropMin();
+    if (m === 'move') {
+      crop.x = clampTo(p[0] - cropDrag.ox, 0, W - crop.w);
+      crop.y = clampTo(p[1] - cropDrag.oy, 0, H - crop.h);
+    } else if (m === 'draw') {
+      const x = clampTo(p[0], 0, W), y = clampTo(p[1], 0, H);
+      crop = { x: Math.min(x, cropDrag.ax), y: Math.min(y, cropDrag.ay), w: Math.abs(x - cropDrag.ax), h: Math.abs(y - cropDrag.ay) };
+    } else {
+      let { L, R, T, B } = cropDrag;
+      if (m.includes('w')) L = clampTo(p[0], 0, R - min);
+      if (m.includes('e')) R = clampTo(p[0], L + min, W);
+      if (m.includes('n')) T = clampTo(p[1], 0, B - min);
+      if (m.includes('s')) B = clampTo(p[1], T + min, H);
+      crop = { x: L, y: T, w: R - L, h: B - T };
+    }
+    redraw();
+  }
+  function cropEndDrag() {
+    const d = cropDrag; cropDrag = null;
+    if (d.mode === 'draw' && (crop.w < cropMin() || crop.h < cropMin())) crop = d.prev || defaultCrop();  // a click or tiny drag keeps the old box
+    cv.style.cursor = 'crosshair';
+    redrawNow();
+  }
+
+  $('cropApply').onclick = applyCrop;
+  $('cropCancel').onclick = cancelCrop;
+  addEventListener('keydown', e => {
+    if (!crop || cropDrag || $('dlg').open || infoDlg.open || blankDlg.open || canvasDlg.open) return;
+    const t = e.target.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    if (e.key === 'Enter' && t !== 'BUTTON') { e.preventDefault(); applyCrop(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelCrop(); }
+  });
+
   // ---- Sub menus (popovers): Image and Download ----
   const popovers = [];
   function makePopover(btn, pop) {
@@ -1772,7 +1950,7 @@ footer .footer-portfolio a {
 
   function openCanvasDlg() {
     if (!img) return;
-    placeText(); placeOverlay();      // lock in anything still floating first
+    placeText(); placeOverlay(); cancelCrop();      // lock in anything still floating first
     $('cvW').value = baseCv.width; $('cvH').value = baseCv.height;
     $('cvCur').textContent = 'Current size: ' + baseCv.width + ' × ' + baseCv.height + ' px';
     $('cvMsg').textContent = '';
@@ -1853,7 +2031,7 @@ footer .footer-portfolio a {
   }, { passive: false });
 
   // The handles / dashed boxes are sized in screen pixels, so redraw when the displayed size changes
-  new ResizeObserver(() => { updateZoomUI(); if (ov || textCanvasPos) redraw(); }).observe(cv);
+  new ResizeObserver(() => { updateZoomUI(); if (ov || textCanvasPos || crop) redraw(); }).observe(cv);
 
   // Panning: Space + drag, middle mouse, or two fingers (which also pinch-zoom)
   let spaceDown = false, pan = null, pinch = null;
@@ -1864,6 +2042,7 @@ footer .footer-portfolio a {
       touches.set(e.pointerId, [e.clientX, e.clientY]);
       if (touches.size === 2) {
         cur = null; ovDrag = null; draggingOnCanvas = false; textResize = null; // abandon the one-finger action
+        if (cropDrag) { if (cropDrag.mode === 'draw') crop = cropDrag.prev || defaultCrop(); cropDrag = null; }
         redraw();
         const [a, b] = [...touches.values()];
         pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, s0: shownScale(), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 };
@@ -2000,6 +2179,16 @@ footer .footer-portfolio a {
       return;
     }
 
+    if (tool === 'crop') {
+      if (!crop) startCrop();
+      const hit = crop && cropHit(p);
+      if (hit) { cropStartDrag(hit, p); cv.style.cursor = hit === 'move' ? 'grabbing' : ovCursor(hit); }
+      else cropStartDraw(p);
+      cv.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
+
     cv.setPointerCapture(e.pointerId);
     cur = { tool, color: curColor(), size: scaled(), fill: fillShapes, a: p, b: p, pts: [p] };
     redraw();
@@ -2011,6 +2200,11 @@ footer .footer-portfolio a {
       const p = pos(e);
       if (ovDrag) ovUpdateDrag(p, e.shiftKey);
       else { const h = ovHit(p); cv.style.cursor = h ? ovCursor(h) : 'crosshair'; }
+      return;
+    }
+    if (cropDrag) { cropUpdateDrag(pos(e)); return; }
+    if (tool === 'crop' && crop) {
+      if (!spaceDown) { const h = cropHit(pos(e)); cv.style.cursor = !h ? 'crosshair' : h === 'move' ? 'move' : ovCursor(h); }
       return;
     }
     if (textResize) { updateTextResize(pos(e)); return; }
@@ -2049,6 +2243,7 @@ footer .footer-portfolio a {
   });
 
   const end = () => {
+    if (cropDrag) { cropEndDrag(); return; }
     if (ov) {
       if (ovDrag) { ovDrag = null; cv.style.cursor = 'move'; redrawNow(); }
       return;
@@ -2082,10 +2277,12 @@ footer .footer-portfolio a {
   $('tools').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (textActive()) placeText();
-    tool = b.dataset.tool;
-    document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    const next = b.dataset.tool;
+    if (tool === 'crop' && next !== 'crop') closeCrop();            // switching to another tool drops the box
+    if (next === 'crop' && tool !== 'crop') toolBeforeCrop = tool;
+    selectTool(next);
     if (eyedropActive) setEyedrop(false);
-    syncFillUI();
+    if (next === 'crop') { b.blur(); if (!crop) startCrop(); }       // blur so Enter applies the crop instead of re-clicking the button
   });
 
   // Outline / Filled choice only applies to Box and Circle
@@ -2111,10 +2308,11 @@ footer .footer-portfolio a {
   function undo() {
     if (ov) { cancelOverlay(); return; }
     if (textActive()) { cancelTextEditor(); return; }
+    if (crop) { cancelCrop(); return; }
     ops.pop(); rebuildBase(); redrawNow();
   }
   $('undo').onclick = undo;
-  $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelOverlay(); cancelTextEditor(); rebuildBase(); redrawNow(); });
+  $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelOverlay(); cancelTextEditor(); cancelCrop(); rebuildBase(); redrawNow(); });
   addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.target !== textInput && !$('dlg').open && !infoDlg.open && !blankDlg.open && !canvasDlg.open) {
       e.preventDefault(); undo();
