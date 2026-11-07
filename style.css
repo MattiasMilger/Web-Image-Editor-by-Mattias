@@ -207,6 +207,10 @@ button.danger:hover:not(:disabled) {
 
 button.small { padding: 5px 10px; font-size: 0.8em; }
 
+/* Buttons with an icon beside the label */
+button.ic { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+button.ic svg { flex: 0 0 auto; pointer-events: none; }
+
 /* Eyedropper in the Color panel */
 .eyedrop-btn {
     display: inline-flex;
@@ -517,15 +521,11 @@ dialog button { min-width: 90px; }
 #downloadPop { width: 230px; }
 #downloadBtn svg { vertical-align: -2px; }
 .menu-list { display: flex; flex-direction: column; gap: 6px; }
-.menu-list button { width: 100%; text-align: left; }
+.menu-list button { width: 100%; text-align: left; display: flex; align-items: center; gap: 10px; }
+.menu-list button svg { flex: 0 0 auto; pointer-events: none; }
 
-/* Canvas size dialog */
-.anchor-box { display: flex; flex-direction: column; gap: 6px; font-size: 0.85em; font-weight: bold; }
-.anchor-grid { display: grid; grid-template-columns: repeat(3, 28px); gap: 4px; }
-dialog .anchor-grid button { min-width: 0; width: 28px; height: 28px; padding: 0; }
-.anchor-grid button[aria-pressed="true"] { background-color: var(--accent-color); border-color: transparent; }
+/* Dialog helpers */
 dialog .hint { margin: 0 0 14px 0; }
-dialog .cv-msg { margin: 0 0 12px 0; min-height: 1.2em; font-size: 0.85em; color: var(--error-color); }
 .blank-fields input:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Crop bar: floats at the bottom of the screen while a crop box is open */
@@ -545,8 +545,14 @@ dialog .cv-msg { margin: 0 0 12px 0; min-height: 1.2em; font-size: 0.85em; color
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     max-width: calc(100vw - 16px);
+    flex-wrap: wrap;
+    justify-content: center;
 }
 .crop-info { font-size: 0.85em; font-weight: bold; white-space: nowrap; }
+.crop-size, .crop-fill { display: flex; align-items: center; gap: 6px; font-size: 0.85em; font-weight: bold; white-space: nowrap; }
+.crop-bar input[type="number"] { width: 78px; -moz-appearance: textfield; appearance: textfield; }
+.crop-bar input[type="number"]::-webkit-outer-spin-button,
+.crop-bar input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 @media (max-width: 768px) {
     /* sit above the fixed bottom toolbar */
     .crop-bar { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
