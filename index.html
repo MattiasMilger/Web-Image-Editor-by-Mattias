@@ -29,6 +29,7 @@
     --canvas-bg: #e8e8e8;
     --empty-bg: #f8f8f8;
     --panel-bg: #f7f7f7;
+    --overlay-color: rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -49,6 +50,7 @@ body {
     --canvas-bg: #1a1a1a;
     --empty-bg: #252528;
     --panel-bg: #353538;
+    --overlay-color: rgba(0, 0, 0, 0.7);
 }
 
 body.light-mode {
@@ -69,9 +71,12 @@ body.light-mode {
     --canvas-bg: #e8e8e8;
     --empty-bg: #f8f8f8;
     --panel-bg: #f7f7f7;
+    --overlay-color: rgba(0, 0, 0, 0.5);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+
+html { scrollbar-gutter: stable; }
 
 html, body {
     width: 100%;
@@ -118,6 +123,23 @@ h1 {
     padding-bottom: 15px;
     color: var(--fg-color);
 }
+
+/* --- Message Area (floating banner, per design guidelines) --- */
+.message-area {
+    position: absolute; top: 0; left: 0; right: 0; min-height: 80px; z-index: 1100;
+    border-radius: 8px; font-weight: bold; text-align: left; padding: 10px 15px; line-height: 1.6;
+    border: 1px solid transparent; white-space: pre-wrap; word-wrap: break-word; opacity: 1; visibility: visible;
+    transition: opacity 0.3s, visibility 0.3s; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em;
+}
+.message-area.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.message-area.error   { background-color: color-mix(in srgb, var(--error-color) 20%, black);   color: var(--error-color);   border-color: var(--error-color); }
+.message-area.warning { background-color: color-mix(in srgb, var(--warning-color) 20%, black); color: var(--warning-color); border-color: var(--warning-color); }
+.message-area.info    { background-color: color-mix(in srgb, var(--info-color) 20%, black);    color: var(--info-color);    border-color: var(--info-color); }
+.message-area.success { background-color: color-mix(in srgb, var(--success-color) 20%, black); color: var(--success-color); border-color: var(--success-color); }
+body.light-mode .message-area.error   { background-color: color-mix(in srgb, var(--error-color) 10%, white); }
+body.light-mode .message-area.warning { background-color: color-mix(in srgb, var(--warning-color) 10%, white); }
+body.light-mode .message-area.info    { background-color: color-mix(in srgb, var(--info-color) 10%, white); }
+body.light-mode .message-area.success { background-color: color-mix(in srgb, var(--success-color) 10%, white); }
 
 /* --- Top Controls for Info button --- */
 .top-controls {
@@ -467,7 +489,7 @@ dialog {
     max-width: 420px;
     width: 90%;
 }
-dialog::backdrop { background-color: rgba(0, 0, 0, 0.6); }
+dialog::backdrop { background-color: var(--overlay-color); }
 dialog p { margin: 0 0 20px 0; font-size: 1.05em; line-height: 1.5; }
 dialog .row { display: flex; justify-content: flex-end; gap: 10px; }
 dialog button { min-width: 90px; }
@@ -714,6 +736,7 @@ footer .footer-portfolio a {
 </head>
 <body>
 <div class="container">
+  <div id="message-area" class="message-area hidden" role="status" aria-live="polite"></div>
   <h1>Web Image Editor</h1>
   <h2 class="subtitle">by Mattias</h2>
 
@@ -986,6 +1009,17 @@ footer .footer-portfolio a {
     try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
   };
 
+  // Floating in-app message banner (success / info auto-dismiss after 2 s, warning / error after 3.5 s)
+  const MESSAGE_DURATION_SHORT = 2000, MESSAGE_DURATION_LONG = 3500;
+  function showMessage(message, type = 'error') {
+    const area = $('message-area');
+    area.textContent = message;
+    area.className = 'message-area ' + type;
+    if (area.timeoutId) clearTimeout(area.timeoutId);
+    area.timeoutId = setTimeout(() => area.classList.add('hidden'),
+      (type === 'success' || type === 'info') ? MESSAGE_DURATION_SHORT : MESSAGE_DURATION_LONG);
+  }
+
   // Info Modal Logic
   const infoDlg = $('infoDlg');
   $('infoBtn').onclick = () => infoDlg.showModal();
@@ -1012,8 +1046,10 @@ footer .footer-portfolio a {
   $('empty').onclick = openPicker;
   $('empty').onkeydown = e => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } };
   function load(blob) {
-    if (!blob || !blob.type.startsWith('image/')) return;
+    if (!blob) return;
+    if (!blob.type.startsWith('image/')) { showMessage('That file is not an image.', 'warning'); return; }
     const url = URL.createObjectURL(blob), im = new Image();
+    im.onerror = () => { URL.revokeObjectURL(url); showMessage('Could not read that image. It may be damaged or in an unsupported format.', 'error'); };
     im.onload = () => {
       img = im;
       cv.width = im.naturalWidth; cv.height = im.naturalHeight;
@@ -1047,7 +1083,9 @@ footer .footer-portfolio a {
   addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) setDropOver(false); });
   addEventListener('drop', e => {
     e.preventDefault(); dragDepth = 0; setDropOver(false);
-    addImage(Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/')));
+    const f = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (!f && e.dataTransfer.files.length) showMessage('Drop an image file (PNG, JPG, GIF, WebP).', 'warning');
+    addImage(f);
   });
   $('insertimg').onclick = () => $('fileInsert').click();
   $('fileInsert').onchange = e => { startOverlay(e.target.files[0]); e.target.value = ''; };
@@ -1062,7 +1100,7 @@ footer .footer-portfolio a {
       g.fillStyle = bg;
       g.fillRect(0, 0, w, h);
     }
-    c.toBlob(b => load(b), 'image/png');
+    c.toBlob(b => b ? load(b) : showMessage('Could not create the blank image.', 'error'), 'image/png');
   }
   function createBlank() {
     const clamp = v => Math.max(16, Math.min(6000, Math.round(+v) || 0));
@@ -1703,7 +1741,7 @@ footer .footer-portfolio a {
       redrawNow();
       URL.revokeObjectURL(url);
     };
-    im.onerror = () => URL.revokeObjectURL(url);
+    im.onerror = () => { URL.revokeObjectURL(url); showMessage('Could not read that image. It may be damaged or in an unsupported format.', 'error'); };
     im.src = url;
   }
 
@@ -2349,7 +2387,12 @@ footer .footer-portfolio a {
       placeText();
       placeOverlay();
       redrawNow();
-      cv.toBlob(b => navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]));
+      cv.toBlob(b => {
+        if (!b) { showMessage('Could not copy the image.', 'error'); return; }
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': b })])
+          .then(() => showMessage('Image copied to clipboard', 'info'))
+          .catch(() => showMessage('The browser blocked copying. Use Download instead.', 'error'));
+      });
     };
   }
 })();

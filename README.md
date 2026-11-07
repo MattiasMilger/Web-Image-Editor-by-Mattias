@@ -30,6 +30,7 @@ Open `index.html` in a modern browser. No build tools or dependencies required.
 - **Download** - The **Download** button next to the **Image** menu exports the image as PNG or high-quality JPG.
 - **Copy image** - In the **Image** menu. Copies the annotated image to the clipboard (supported browsers).
 - **Dark / Light Theme** - Toggle between dark and light modes with the ◐ button (dark by default, choice is remembered).
+- **Messages** - A floating banner at the top of the page reports problems (a file that is not an image, an image that cannot be read, copying blocked by the browser) and confirms Copy image. Success and info messages fade after 2 seconds, warnings and errors after 3.5.
 - **Privacy** - Everything stays in your browser. Nothing is uploaded.
 
 ## Project Structure
@@ -67,6 +68,7 @@ Web Image Editor by Mattias/
 - **Pointer events** - Supports mouse, touch, and pen input.
 - **Censor** - Uses average-colour blocks so text under the censored area cannot be recovered.
 - **Theme** - The selected theme is saved in `localStorage` and restored on the next visit.
+- **Styles** - The live styles are inline in `index.html`; `style.css` is kept as an exact copy of them for reference and editing.
 
 ## Browser Support
 
