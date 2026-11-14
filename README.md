@@ -23,7 +23,7 @@ Open `index.html` in a modern browser. No build tools or dependencies required.
 - **Blank image** - Start from a blank canvas (pick a size or a preset, and a colour (white by default) or transparent background) instead of opening a picture, then draw, insert images and add text on it.
 - **Transparent colour** - The checkerboard swatch erases to transparency with any tool (paint, shapes, text). Download PNG to keep the transparency; JPG fills it with white.
 - **Import image** - *(Image menu)* Open a picture from your computer, replacing the current image.
-- **Insert image** - Drop, paste (Ctrl+V) or pick another image to add it on top of the current one. Drag to move, drag the corner / edge handles to resize freely (Shift on a corner keeps proportions), then click outside it (or press Enter) to lock it in. Esc cancels.
+- **Insert image** - Drop, paste (Ctrl+V) or pick another image to add it on top of the current one. Drag to move, drag the corner / edge handles to resize freely (Shift on a corner keeps proportions), then click outside it (or press Enter) to lock it in. Esc cancels. **If the image is larger than the canvas, the canvas grows automatically** to fit it (up to 8000 px per side): the existing picture is centred in the new size, the new area uses the **New area** colour from Crop / Canvas size, and Esc or Undo takes the growth back along with the image.
 - **Zoom & pan** - Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / - / 0 keys. Pan by scrolling, Space + drag, or middle-mouse drag; on touch screens use two fingers to pan and pinch. All tools keep working while zoomed.
 - **Colour & Size** - Shared colour picker, swatches, and size control for all tools. For Text, Size sets the font size. Size runs from 1 to 48 in whole numbers (standard is 6): drag the slider (finer steps at the small end) or type an exact number. Decimals and out-of-range values are flagged while typing and rounded / clamped when you confirm.
 - **Undo / Clear** - Undo last annotation or clear everything (with confirmation).
@@ -51,7 +51,7 @@ Web Image Editor by Mattias/
 1. Load an image by clicking the empty area, dragging a file, or pasting (Ctrl+V / Cmd+V) - or use **Image > Blank image** to start with a blank canvas.
 2. Select a tool (Paint, Arrow, Line, Box, Circle, Censor, or Text).
 3. Draw or place annotations using the current colour and size.
-4. To **insert an image**: drop, paste, or click **Insert image** while an image is open. Move and resize it, then click anywhere outside it (or press Enter) to place it.
+4. To **insert an image**: drop, paste, or click **Insert image** while an image is open. If it is larger than the canvas, the canvas grows to fit. Move and resize it, then click anywhere outside it (or press Enter) to place it.
 5. For **Text**: click on the image and type (Enter = new line). Change the Size to make it larger or smaller, drag the text to move it, then click anywhere outside it (or press Ctrl+Enter) to place it. Drag the side handles to change the width of the text box (the text wraps).
 6. Undo individual steps or clear all annotations.
 7. Use **Image > Crop / Canvas size** to keep only part of the picture, or to add canvas around it.
@@ -64,6 +64,7 @@ Web Image Editor by Mattias/
 - **Canvas-based** - Annotations are drawn on an HTML5 canvas over the original image.
 - **Separate UI layer** - The text box, its handles, the caret, the censor selection and the insert-image frame are drawn on a second transparent canvas laid over the picture, so they never end up in Copy, Download or the browser's right-click *Copy image*.
 - **Crop / Canvas size** - One tool. The result is stored as a single canvas-size step (new size, where the picture sits, fill for the new area), so it shares the same Undo / Clear handling and annotations drawn before it keep their place. Limited to 8000 px per side. While the box is open the canvas shows a margin around the picture so the box can be dragged outside it; the dimmed overlay, handles and guides live on the separate UI canvas, and Copy / Download close the box first so they never include any of it.
+- **Auto-grow on insert** - An inserted image that is wider or taller than the canvas first adds a canvas-size step (same step type as Crop / Canvas size), then floats at full size. Placing it keeps both steps and Undo removes them together; Esc removes the growth. Beyond the size limits the canvas is not grown and the image is scaled to fit instead.
 - **Text wrapping** - Text is laid out line by line for the chosen box width and then stretched vertically by the box height; the caret and the selection are mapped onto the wrapped lines.
 - **Pointer events** - Supports mouse, touch, and pen input.
 - **Censor** - Uses average-colour blocks so text under the censored area cannot be recovered.

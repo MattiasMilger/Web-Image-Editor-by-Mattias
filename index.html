@@ -953,7 +953,7 @@ footer .footer-portfolio a {
         <li><strong>Zoom:</strong> Use the Zoom buttons, Ctrl/Cmd + mouse wheel (or trackpad pinch), or the + / &minus; / 0 keys. Pan by scrolling, holding Space and dragging, or middle-mouse dragging. On touch screens use two fingers to pan and pinch.</li>
         <li><strong>Blank image:</strong> Start from a blank canvas of any size with a colour (white by default) or transparent background, then draw, insert images and add text on it.</li>
         <li><strong>Transparent colour:</strong> The checkerboard swatch erases to transparency with any tool. Download PNG to keep it (JPG fills transparent areas with white).</li>
-        <li><strong>Insert image:</strong> With an image open, drop, paste (Ctrl+V) or use <em>Insert image</em> to add another picture on top. Drag it to move and drag the handles to resize (hold Shift on a corner to keep proportions). Click anywhere outside it to place it, or press Esc to cancel.</li>
+        <li><strong>Insert image:</strong> With an image open, drop, paste (Ctrl+V) or use <em>Insert image</em> to add another picture on top. Drag it to move and drag the handles to resize (hold Shift on a corner to keep proportions). If the image is larger than the canvas, the canvas grows automatically to fit it (the new area uses the colour from Crop / Canvas size). Click anywhere outside it to place it, or press Esc to cancel.</li>
         <li><strong>Eyedropper:</strong> In the Color panel, click the pipette icon, then click the image to copy that pixel’s colour into the selected swatch.</li>
       </ul>
     </div>
@@ -1733,9 +1733,23 @@ footer .footer-portfolio a {
       placeText();                // lock in any pending text first
       if (ov) placeOverlay();     // lock in a previous insert first
       const nw = im.naturalWidth, nh = im.naturalHeight;
-      const s = Math.min(1, cv.width * 0.6 / nw, cv.height * 0.6 / nh);
+      const W = baseCv.width, H = baseCv.height;
+      let cw = W, ch = H, growOp = null;
+      // An image larger than the canvas makes the canvas grow to fit it (the existing picture is centred in the new size, the new area uses
+      // the "New area" fill from Crop / Canvas size). Smaller images are not scaled up and start at up to 60% of the canvas.
+      if (nw > W || nh > H) {
+        const tw = Math.min(Math.max(W, nw), Math.max(CV_MAX_SIDE, W));
+        const th = Math.min(Math.max(H, nh), Math.max(CV_MAX_SIDE, H));
+        if (tw * th <= Math.max(CV_MAX_AREA, W * H)) {
+          growOp = { tool: 'canvas', cw: tw, ch: th, ox: Math.round((tw - W) / 2), oy: Math.round((th - H) / 2), fill: cropFill() };
+          ops.push(growOp); rebuildBase();
+          cw = tw; ch = th;
+          showMessage('Canvas enlarged to ' + cw + ' \u00d7 ' + ch + ' px to fit the image.', 'info');
+        } else showMessage('Too large to enlarge the canvas (max ' + CV_MAX_SIDE + ' px per side, about 50 megapixels). The image was scaled to fit.', 'warning');
+      }
+      const s = growOp ? Math.min(1, cw / nw, ch / nh) : Math.min(1, cw * 0.6 / nw, ch * 0.6 / nh);
       const w = nw * s, h = nh * s;
-      ov = { im, x: (cv.width - w) / 2, y: (cv.height - h) / 2, w, h, ar: nw / nh };
+      ov = { im, x: (cw - w) / 2, y: (ch - h) / 2, w, h, ar: nw / nh, growOp };
       ovDrag = null;
       cv.style.cursor = 'move';
       redrawNow();
@@ -1747,7 +1761,7 @@ footer .footer-portfolio a {
 
   function placeOverlay() {
     if (!ov) return;
-    ops.push({ tool: 'image', im: ov.im, x: ov.x, y: ov.y, w: ov.w, h: ov.h });
+    ops.push({ tool: 'image', im: ov.im, x: ov.x, y: ov.y, w: ov.w, h: ov.h, growOp: ov.growOp });
     ov = null; ovDrag = null;
     cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
     rebuildBase();
@@ -1756,6 +1770,7 @@ footer .footer-portfolio a {
 
   function cancelOverlay() {
     if (!ov) return;
+    if (ov.growOp && ops[ops.length - 1] === ov.growOp) { ops.pop(); rebuildBase(); }   // take back the canvas growth that came with it
     ov = null; ovDrag = null;
     cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
     redrawNow();
@@ -2347,7 +2362,9 @@ footer .footer-portfolio a {
     if (ov) { cancelOverlay(); return; }
     if (textActive()) { cancelTextEditor(); return; }
     if (crop) { cancelCrop(); return; }
-    ops.pop(); rebuildBase(); redrawNow();
+    const last = ops.pop();
+    if (last && last.growOp && ops[ops.length - 1] === last.growOp) ops.pop();   // an image that enlarged the canvas undoes in one step
+    rebuildBase(); redrawNow();
   }
   $('undo').onclick = undo;
   $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelOverlay(); cancelTextEditor(); cancelCrop(); rebuildBase(); redrawNow(); });
