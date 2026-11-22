@@ -946,7 +946,7 @@ footer .footer-portfolio a {
         <li><strong>Arrow & Line:</strong> Draw straight indicator lines or clean open-headed arrows. Arrows end exactly where you release and stay inside the image, so they never clip.</li>
         <li><strong>Box & Circle:</strong> Draw precise rectangular or circular shapes. Use the Shape option to choose outline or filled.</li>
         <li><strong>Censor:</strong> Pixelate and block out sensitive information securely using average-colour blocks. The Size setting sets the block size.</li>
-        <li><strong>Text:</strong> Click the image and type. Press Enter for a new line. Use Size to make the text larger or smaller. Drag the handles on the left and right side to change the width of the text box (the text wraps to fit) and the handles on the top and bottom to stretch the text taller or flatter. The corner handles do both, so the box can be any rectangle or square. Drag the text to move it, then click anywhere outside it (or press Ctrl+Enter) to place it. Esc cancels.</li>
+        <li><strong>Text:</strong> Click the image and type. Press Enter for a new line. Use Size to make the text larger or smaller. Drag the handles on the left and right side to change the width of the text box (the text wraps to fit, the size stays the same). Drag a corner handle to make the text larger or smaller; the Size control follows along. Drag the text to move it, then click anywhere outside it (or press Ctrl+Enter) to place it. Esc cancels.</li>
         <li><strong>Crop / Canvas size:</strong> Open the <em>Image</em> menu and choose <em>Crop / Canvas size</em>, and a box appears on the image. Drag its handles to choose the part to keep, drag inside it to move it, or drag outside it to draw a new box. Drag the box past the edge of the picture to add canvas there (choose a colour or transparent for the new area), or type an exact width and height. Everything outside the box is dimmed. Click <em>Apply</em> (or press Enter) to apply it, or Cancel (Esc) to leave it as it is. Undo takes it back.</li>
         <li><strong>Download:</strong> The Download button next to the Image menu saves the image as PNG or JPG.</li>
         <li><strong>Copy image:</strong> In the Image menu. Copies the annotated image to the clipboard (supported browsers).</li>
@@ -955,6 +955,9 @@ footer .footer-portfolio a {
         <li><strong>Transparent colour:</strong> The checkerboard swatch erases to transparency with any tool. Download PNG to keep it (JPG fills transparent areas with white).</li>
         <li><strong>Insert image:</strong> With an image open, drop, paste (Ctrl+V) or use <em>Insert image</em> to add another picture on top. Drag it to move and drag the handles to resize (hold Shift on a corner to keep proportions). If the image is larger than the canvas, the canvas grows automatically to fit it (the new area uses the colour from Crop / Canvas size). Click anywhere outside it to place it, or press Esc to cancel.</li>
         <li><strong>Eyedropper:</strong> In the Color panel, click the pipette icon, then click the image to copy that pixel’s colour into the selected swatch.</li>
+        <li><strong>Straight shapes:</strong> Hold Shift while drawing to snap Line and Arrow to 45° steps, and to make Box a square and Circle a perfect circle.</li>
+        <li><strong>Keyboard shortcuts:</strong> P Paint, A Arrow, L Line, B Box, C Circle, X Censor, T Text, I Eyedropper, [ / ] smaller / larger. Ctrl+Z undo, Ctrl+Y (or Ctrl+Shift+Z) redo, Ctrl+S download (in the format you used last), Ctrl+C copy the image.</li>
+        <li><strong>Remembered settings:</strong> Your tool, size, shape fill, colour swatch and download format are kept for your next visit. If you try to leave with changes you have not downloaded or copied, the browser asks first.</li>
       </ul>
     </div>
 
@@ -988,6 +991,14 @@ footer .footer-portfolio a {
   function curColor() { return transparentSel ? 'transparent' : $('color').value; }
   let rafId = 0; // requestAnimationFrame id for coalescing redraws
   let eyedropActive = false;
+  let redoStack = [];   // groups of ops taken back by Undo, newest last (cleared by any new edit)
+  function pushOp(o) { ops.push(o); redoStack = []; }
+  // Unsaved-work tracking: what ops looked like at the last Download / Copy (or image load)
+  let savedLen = 0, savedLast;
+  const markSaved = () => { savedLen = ops.length; savedLast = ops[ops.length - 1]; };
+  // Remembered settings (tool, size, shape fill, colour swatch, download format); saving starts once they are restored
+  const SETTINGS_KEY = 'web-image-editor-settings';
+  let settingsReady = false, lastFormat = 'png';
 
   function setEyedrop(on) {
     eyedropActive = !!on;
@@ -1054,7 +1065,7 @@ footer .footer-portfolio a {
       img = im;
       cv.width = im.naturalWidth; cv.height = im.naturalHeight;
       baseCv.width = cv.width; baseCv.height = cv.height;
-      ops = []; cur = null;
+      ops = []; cur = null; redoStack = []; markSaved();
       ov = null; ovDrag = null;
       closeCrop();
       zoom = null; applyZoom();
@@ -1373,7 +1384,7 @@ footer .footer-portfolio a {
   let caretOn = true, caretTimer = 0;
   let textSize = 6, textResize = null; // in-progress text size (Size x image scale), corner-resize drag state
   let textBoxW = null;                    // wrap width of the text being edited (null = wrap at the image edge)
-  let textSY = 1;                         // vertical stretch of the text being edited (1 = normal)
+  let textSY = 1;                         // vertical stretch (always 1 now; older stretched text still draws with its own sy)
   let draggingOnCanvas = false;
   let canvasDragOffsetX = 0, canvasDragOffsetY = 0;
 
@@ -1397,7 +1408,7 @@ footer .footer-portfolio a {
   const textCorners = () => {
     const t = textBox(), pad = 5 * pxScale();
     const x1 = t.x - pad, y1 = t.y - pad, x2 = t.x + t.w + pad, y2 = t.y + t.h + pad, mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-    return [['nw', x1, y1], ['ne', x2, y1], ['sw', x1, y2], ['se', x2, y2], ['w', x1, my], ['e', x2, my], ['n', mx, y1], ['s', mx, y2]];
+    return [['nw', x1, y1], ['ne', x2, y1], ['sw', x1, y2], ['se', x2, y2], ['w', x1, my], ['e', x2, my]];
   };
   function textHandleHit(p) {
     let best = null, bd = 16 * pxScale();
@@ -1459,24 +1470,32 @@ footer .footer-portfolio a {
     textResize = {
       mode,
       ax: mode.includes('w') ? t.x + t.w : t.x,   // the opposite edges stay put
-      ay: mode.includes('n') ? t.y + t.h : t.y
+      ay: mode.includes('n') ? t.y + t.h : t.y,
+      w0: Math.max(1, t.w), h0: Math.max(1, t.h), size0: textSize, bw0: textBoxW
     };
   }
 
-  // Every handle reshapes the text box: left / right change its width (the text wraps to fit),
-  // top / bottom stretch the text taller or flatter, corners do both. Size sets the font size.
+  // Left / right handles change the box width (the text wraps to fit, the size stays the same).
+  // Corner handles scale the text in proportion and update the Size control, so both always agree.
   function updateTextResize(p) {
     const r = textResize, m = r.mode, pad = 5 * pxScale();
-    if (m.includes('e') || m.includes('w')) {
-      const newW = m.includes('e') ? p[0] - pad - r.ax : r.ax - p[0] - pad;
+    if (m === 'e' || m === 'w') {
+      const newW = m === 'e' ? p[0] - pad - r.ax : r.ax - p[0] - pad;
       textBoxW = Math.max(textPx(textSize) * 1.5, newW);
-      textCanvasPos[0] = m.includes('e') ? r.ax : r.ax - textBoxW;
-    }
-    if (m.includes('n') || m.includes('s')) {
-      const nat = layoutText(textInput.value, textSize, curWrap()).h;   // unstretched height at the new width
-      const newH = m.includes('s') ? p[1] - pad - r.ay : r.ay - p[1] - pad;
-      textSY = Math.max(0.2, Math.min(10, newH / nat));
-      textCanvasPos[1] = m.includes('s') ? r.ay : r.ay - nat * textSY;
+      textCanvasPos[0] = m === 'e' ? r.ax : r.ax - textBoxW;
+    } else {
+      const fx = (m.includes('e') ? p[0] - pad - r.ax : r.ax - p[0] - pad) / r.w0;
+      const fy = (m.includes('s') ? p[1] - pad - r.ay : r.ay - p[1] - pad) / r.h0;
+      const k = imgScale();
+      // Whole Size steps, within the Size control's range, so the Size box shows exactly what is drawn
+      const units = roundSize(clampSize(r.size0 * Math.max(fx, fy) / k));
+      textSize = units * k;
+      const f = textSize / r.size0;
+      if (r.bw0) textBoxW = r.bw0 * f;          // a set box width scales with the text, so it wraps the same way
+      syncSizeUI();
+      const t = textBox();
+      textCanvasPos[0] = m.includes('w') ? r.ax - t.w : r.ax;
+      textCanvasPos[1] = m.includes('n') ? r.ay - t.h : r.ay;
     }
     redraw();
   }
@@ -1507,7 +1526,7 @@ footer .footer-portfolio a {
     if (!textCanvasPos) return;
     const text = textInput.value.replace(/\s+$/, '');
     if (!text.trim()) { cancelTextEditor(); return; }
-    ops.push({ tool: 'text', color: curColor(), size: textSize, a: [textCanvasPos[0], textCanvasPos[1]], text, bw: curWrap(), sy: textSY });
+    pushOp({ tool: 'text', color: curColor(), size: textSize, a: [textCanvasPos[0], textCanvasPos[1]], text, bw: curWrap(), sy: textSY });
     rebuildBase();
     cancelTextEditor();
   }
@@ -1571,6 +1590,7 @@ footer .footer-portfolio a {
     if (from !== 'slider') sizeSlider.value = sliderFromSize(v);
     sizeBox.classList.remove('invalid');
     if (textActive()) { textSize = scaled(); redraw(); } // Size also sets the font size of the text being edited
+    saveSettings();
   }
   // Reflect the size of the in-progress text (e.g. after dragging a corner handle) in the Size control
   function syncSizeUI() {
@@ -1635,6 +1655,7 @@ footer .footer-portfolio a {
         transparentSel = false;
         $('color').value = palette[i];
         renderSwatches();
+        saveSettings();
         if (textActive()) redraw();
         refocusText();
       };
@@ -1651,6 +1672,7 @@ footer .footer-portfolio a {
       transparentSel = true;
       if (eyedropActive) setEyedrop(false);
       renderSwatches();
+      saveSettings();
       if (textActive()) redraw();
       refocusText();
     };
@@ -1742,7 +1764,7 @@ footer .footer-portfolio a {
         const th = Math.min(Math.max(H, nh), Math.max(CV_MAX_SIDE, H));
         if (tw * th <= Math.max(CV_MAX_AREA, W * H)) {
           growOp = { tool: 'canvas', cw: tw, ch: th, ox: Math.round((tw - W) / 2), oy: Math.round((th - H) / 2), fill: cropFill() };
-          ops.push(growOp); rebuildBase();
+          pushOp(growOp); rebuildBase();
           cw = tw; ch = th;
           showMessage('Canvas enlarged to ' + cw + ' \u00d7 ' + ch + ' px to fit the image.', 'info');
         } else showMessage('Too large to enlarge the canvas (max ' + CV_MAX_SIDE + ' px per side, about 50 megapixels). The image was scaled to fit.', 'warning');
@@ -1761,7 +1783,7 @@ footer .footer-portfolio a {
 
   function placeOverlay() {
     if (!ov) return;
-    ops.push({ tool: 'image', im: ov.im, x: ov.x, y: ov.y, w: ov.w, h: ov.h, growOp: ov.growOp });
+    pushOp({ tool: 'image', im: ov.im, x: ov.x, y: ov.y, w: ov.w, h: ov.h, growOp: ov.growOp });
     ov = null; ovDrag = null;
     cv.style.cursor = eyedropActive ? 'copy' : 'crosshair';
     rebuildBase();
@@ -1909,6 +1931,7 @@ footer .footer-portfolio a {
     tool = name;
     document.querySelectorAll('#tools button').forEach(x => x.setAttribute('aria-pressed', x.dataset.tool === name));
     syncFillUI();
+    saveSettings();
   }
   function cancelCrop() {                 // drop the box and go back to the tool that was active before
     if (!crop && tool !== 'crop') return;
@@ -1927,7 +1950,7 @@ footer .footer-portfolio a {
     closeCrop();
     selectTool(toolBeforeCrop);
     if (!whole) {
-      ops.push({ tool: 'canvas', cw: r.w, ch: r.h, ox: -r.x, oy: -r.y, fill });
+      pushOp({ tool: 'canvas', cw: r.w, ch: r.h, ox: -r.x, oy: -r.y, fill });
       rebuildBase();
     }
     redrawNow();
@@ -2283,6 +2306,16 @@ footer .footer-portfolio a {
 
     if (!cur) return;
     const p = pos(e);
+    if (e.shiftKey) {
+      const dx = p[0] - cur.a[0], dy = p[1] - cur.a[1];
+      if (cur.tool === 'line' || cur.tool === 'arrow') {   // Shift: snap the direction to steps of 45 degrees
+        const step = Math.PI / 4, ang = Math.round(Math.atan2(dy, dx) / step) * step, len = Math.hypot(dx, dy);
+        p[0] = cur.a[0] + Math.cos(ang) * len; p[1] = cur.a[1] + Math.sin(ang) * len;
+      } else if (cur.tool === 'rect' || cur.tool === 'circle') {   // Shift: perfect square / circle
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        p[0] = cur.a[0] + (dx < 0 ? -d : d); p[1] = cur.a[1] + (dy < 0 ? -d : d);
+      }
+    }
     if (cur.tool === 'arrow') { // keep the whole arrow inside the image so the head is never cut off at the edge
       p[0] = Math.max(0, Math.min(baseCv.width, p[0]));
       p[1] = Math.max(0, Math.min(baseCv.height, p[1]));
@@ -2320,7 +2353,7 @@ footer .footer-portfolio a {
     if (!cur) return;
     const moved = Math.hypot(cur.b[0] - cur.a[0], cur.b[1] - cur.a[1]) > 3;
     if (moved || cur.tool === 'pen') {
-      ops.push(cur);
+      pushOp(cur);
       rebuildBase();
     }
     cur = null;
@@ -2350,6 +2383,7 @@ footer .footer-portfolio a {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     fillShapes = b.dataset.fill === '1';
     syncFillUI();
+    saveSettings();
   });
   syncFillUI();
 
@@ -2363,22 +2397,99 @@ footer .footer-portfolio a {
     if (textActive()) { cancelTextEditor(); return; }
     if (crop) { cancelCrop(); return; }
     const last = ops.pop();
-    if (last && last.growOp && ops[ops.length - 1] === last.growOp) ops.pop();   // an image that enlarged the canvas undoes in one step
+    if (!last) return;
+    const group = [last];
+    if (last.growOp && ops[ops.length - 1] === last.growOp) group.unshift(ops.pop());   // an image that enlarged the canvas undoes in one step
+    redoStack.push(group);
+    rebuildBase(); redrawNow();
+  }
+  // Redo puts back the last group Undo took away (finishes any text / image being placed first)
+  function redo() {
+    if (!redoStack.length) return;
+    if (ov || textActive() || crop) return;   // something is still being edited: Undo / Esc handles it
+    ops.push(...redoStack.pop());
     rebuildBase(); redrawNow();
   }
   $('undo').onclick = undo;
-  $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; cancelOverlay(); cancelTextEditor(); cancelCrop(); rebuildBase(); redrawNow(); });
+  $('clear').onclick = () => ask('Clear all annotations? This removes everything you drew.', 'Clear all', () => { ops = []; redoStack = []; cancelOverlay(); cancelTextEditor(); cancelCrop(); rebuildBase(); redrawNow(); });
+  const dialogOpen = () => $('dlg').open || infoDlg.open || blankDlg.open;
+  const typingIn = t => !!(t && t.closest && t.closest('input, textarea, select, [contenteditable]'));
   addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.target !== textInput && !$('dlg').open && !infoDlg.open && !blankDlg.open) {
-      e.preventDefault(); undo();
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || dialogOpen()) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' || k === 'y') {
+      if (e.target === textInput) return;   // the text box has its own undo while typing
+      e.preventDefault();
+      if (k === 'y' || e.shiftKey) redo(); else undo();
+    } else if (k === 's' && !e.shiftKey) {   // Ctrl+S: download in the last used format
+      e.preventDefault();
+      if (img) $(lastFormat === 'jpg' ? 'saveJpg' : 'save').click();
+    } else if (k === 'c' && !e.shiftKey && img && canCopy && !typingIn(e.target) && !textActive() &&
+               !String(getSelection && getSelection()).length) {   // Ctrl+C with nothing else to copy: copy the image
+      e.preventDefault(); copyImage();
     }
   });
+
+  // Single-key tool shortcuts (ignored while typing, editing text or in dialogs)
+  const TOOL_KEYS = { p: 'pen', a: 'arrow', l: 'line', b: 'rect', c: 'circle', x: 'censor', t: 'text' };
+  addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || dialogOpen() || textActive() || typingIn(e.target)) return;
+    const k = e.key.toLowerCase();
+    if (TOOL_KEYS[k]) {
+      const b = document.querySelector('#tools button[data-tool="' + TOOL_KEYS[k] + '"]');
+      if (b) { e.preventDefault(); b.click(); }
+    } else if (k === 'i') {
+      if (!$('eyedropBtn').disabled) { e.preventDefault(); $('eyedropBtn').click(); }
+    } else if (e.key === '[' || e.key === ']') {
+      e.preventDefault(); setSize(lastGoodSize + (e.key === ']' ? 1 : -1));
+    }
+  });
+  // Shortcut hints in the tooltips
+  for (const [k, t] of Object.entries(TOOL_KEYS)) {
+    const b = document.querySelector('#tools button[data-tool="' + t + '"]');
+    if (b) b.title += ' (' + k.toUpperCase() + ')';
+  }
+  $('eyedropBtn').title += ' (I)';
+  $('sizeDown').title += ' ([)';
+  $('sizeUp').title += ' (])';
+  $('undo').title = 'Remove the last annotation (Ctrl+Z). Redo: Ctrl+Y';
+  $('save').title = 'Ctrl+S downloads in the format you used last';
+  $('saveJpg').title = 'Ctrl+S downloads in the format you used last';
+
+  // Ask before leaving the page with edits that were not downloaded or copied
+  addEventListener('beforeunload', e => {
+    const dirty = ov || textActive() || ops.length !== savedLen || ops[ops.length - 1] !== savedLast;
+    if (img && dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // Remembered settings
+  function saveSettings() {
+    if (!settingsReady) return;
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        tool: tool === 'crop' ? toolBeforeCrop : tool, size: lastGoodSize, fill: fillShapes,
+        sel, transparent: transparentSel, format: lastFormat
+      }));
+    } catch (e) {}
+  }
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+    if (Object.values(TOOL_KEYS).includes(s.tool)) selectTool(s.tool);
+    if (sizeOk(s.size)) setSize(s.size);
+    if (typeof s.fill === 'boolean') { fillShapes = s.fill; syncFillUI(); }
+    if (Number.isInteger(s.sel) && s.sel >= 0 && s.sel < palette.length) { sel = s.sel; $('color').value = palette[sel]; }
+    if (typeof s.transparent === 'boolean') transparentSel = s.transparent;
+    if (s.format === 'png' || s.format === 'jpg') lastFormat = s.format;
+    renderSwatches();
+  } catch (e) {}
+  settingsReady = true;
 
   function downloadCanvas(type, extension, quality) {
     if (crop) cancelCrop();
     placeText();
     placeOverlay();
     redrawNow();
+    lastFormat = extension; saveSettings(); markSaved();
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const a = document.createElement('a');
     a.download = 'annotated-' + stamp + '.' + extension;
@@ -2397,20 +2508,23 @@ footer .footer-portfolio a {
   $('save').onclick = () => downloadCanvas('image/png', 'png');
   $('saveJpg').onclick = () => downloadCanvas('image/jpeg', 'jpg', 0.95);
 
+  function copyImage() {
+    if (crop) cancelCrop();
+    placeText();
+    placeOverlay();
+    redrawNow();
+    const len = ops.length, last = ops[len - 1];
+    cv.toBlob(b => {
+      if (!b) { showMessage('Could not copy the image.', 'error'); return; }
+      navigator.clipboard.write([new ClipboardItem({ 'image/png': b })])
+        .then(() => { savedLen = len; savedLast = last; showMessage('Image copied to clipboard', 'info'); })
+        .catch(() => showMessage('The browser blocked copying. Use Download instead.', 'error'));
+    });
+  }
   if (!canCopy) $('copy').classList.add('hide');
   else {
-    $('copy').onclick = () => {
-      if (crop) cancelCrop();
-      placeText();
-      placeOverlay();
-      redrawNow();
-      cv.toBlob(b => {
-        if (!b) { showMessage('Could not copy the image.', 'error'); return; }
-        navigator.clipboard.write([new ClipboardItem({ 'image/png': b })])
-          .then(() => showMessage('Image copied to clipboard', 'info'))
-          .catch(() => showMessage('The browser blocked copying. Use Download instead.', 'error'));
-      });
-    };
+    $('copy').onclick = copyImage;
+    $('copy').title += ' (Ctrl+C)';
   }
 })();
 </script>
