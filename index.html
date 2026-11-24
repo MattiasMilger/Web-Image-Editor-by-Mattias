@@ -1136,7 +1136,8 @@ footer .footer-portfolio a {
   // Drawing helpers — exact censor algorithm (samples + fills on the same ctx)
   function censor(targetCtx, rx, ry, rw, rh, size) {
     const x = Math.max(0, Math.floor(rx)), y = Math.max(0, Math.floor(ry));
-    const w = Math.min(targetCtx.canvas.width - x, Math.ceil(rw)), h = Math.min(targetCtx.canvas.height - y, Math.ceil(rh));
+    // Clip the far edge too, so cutting off the part outside the image doesn't shift the box over
+    const w = Math.min(targetCtx.canvas.width, Math.ceil(rx + rw)) - x, h = Math.min(targetCtx.canvas.height, Math.ceil(ry + rh)) - y;
     if (w < 2 || h < 2) return;
     const blk = Math.max(6 * imgScale(), size * 2);
     const d = targetCtx.getImageData(x, y, w, h).data;
